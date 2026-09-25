@@ -1,6 +1,6 @@
 # CHANGELOG
 
-**v0.15** adds **USB drive mode**: plug the board into a computer and the SD card shows up as a USB drive, so games can be added without taking the card out. 
+**v0.16** adds an **overscan fix** for the menus, for TVs that cut off the edges of the screen, and fits more options on one page of the settings menu.
 
 
 # General Info
@@ -27,6 +27,18 @@ Only RP2350 (pico 2 based boards) supported. Works best with [Adafruit Fruit Jam
 > **Note:** This limitation does **not** apply to **HSTX-based boards** (e.g., *Adafruit Fruit Jam*), where the monitor refresh rate can be set to **60 Hz**.
 >
 > Games also **run slower** on PicoDVI boards. See [Performance](#performance) below.
+
+# v0.16 Release notes
+
+## What's new
+
+- **Overscan fix in menu.** A new setting for TVs that cut off the edges of the screen. It leaves the top and bottom rows of the menus blank, and optionally the first and last columns as well. The change is shown right away in the settings menu.
+- **More options on one page in the settings menu.** The color palette is now only shown while one of the menu color options is selected, which leaves room for more options on screen.
+- **Quicker saving in the settings menu.** Press SELECT on any setting to jump straight to the SAVE/CANCEL/DEFAULT row.
+
+## Fixes
+
+- **Controller test screen** shows the controller outline and the list of controllers correctly again.
 
 # v0.15 Release notes
 
