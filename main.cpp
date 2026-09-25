@@ -129,7 +129,7 @@ static uint16_t wiipad_raw_cached = 0;
  */
 #define EMULATOR_CLOCKFREQ_KHZ 378000 //  Overclock frequency in kHz when using HSTX
                                       // May cause artifacts on some screens, 336000 seems stable
-                                      // https://github.com/fhoedemakers/retroJam/issues/7
+                                      // https://github.com/PicoPlus-devel/retroJam/issues/7
 #define VOLTAGE VREG_VOLTAGE_1_50
 #endif
 static uint32_t CPUFreqKHz = EMULATOR_CLOCKFREQ_KHZ;
@@ -169,6 +169,11 @@ const int8_t g_settings_visibility_md[MOPT_COUNT] = {
     [MOPT_CONTROLLER_TEST]           = 1,
     [MOPT_RECENT_GAMES]              = 1,  // Rom browser only; menu.cpp gates in-game
     [MOPT_USB_DRIVE_MODE]            = 0,  // USB drive mode (menu.cpp force-shows this in the rom browser)
+    [MOPT_CASSETTE]                  = 0,  // TI-99/4A only
+    [MOPT_DISK]                      = 0,  // TI-99/4A only
+    [MOPT_SERIAL_KEYBOARD]           = 0,  // TI-99/4A only
+    [MOPT_SPRITE_LIMIT]              = 0,  // NES only
+    [MOPT_MENU_OVERSCAN]             = 0,  // Overscan in menu (menu.cpp force-shows this below the menu colors)
 };
 
 const uint8_t g_available_screen_modes_md[] = {
