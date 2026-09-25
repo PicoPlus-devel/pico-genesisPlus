@@ -262,7 +262,9 @@ Gamepad buttons:
 - Button1: back to the parent folder.
 - START: show [box art and game info](#box-art-and-game-info).
 - Button3: show the list of [recently played games](#recently-played-games).
-- SELECT: open the settings menu. Here you can change things like the screen mode, scanlines, the game sound, [frame skip](#frame-skip), [usb drive mode](#usb-drive-mode), the framerate display, the menu colours and settings specific to your board. The same menu can be opened while a game is running.
+- SELECT: open the settings menu. Here you can change things like the screen mode, scanlines, the game sound, [frame skip](#frame-skip), [usb drive mode](#usb-drive-mode), the framerate display, the menu colours, the overscan fix for the menus and settings specific to your board. The same menu can be opened while a game is running.
+
+**Overscan fix in menu** is meant for TVs that cut off the edges of the picture: **Rows** leaves the top and bottom text rows of the menus blank, **Rows & columns** also leaves the first and last columns blank. The effect is shown while the setting is changed, and it applies to the menus only, not to the game picture. The color palette is shown only while one of the two menu color entries is selected, which leaves room for more entries on one page. In the settings menu, press SELECT on any setting to jump straight to the SAVE/CANCEL/DEFAULT row. Changes are only applied when **SAVE** is selected.
 
 When using a USB keyboard:
 - Cursor keys: up, down, left, right
