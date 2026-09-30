@@ -67,7 +67,9 @@ static int fpsStringLen = 2;
 static bool reset = false;
 static bool resetGame = false;
 
-extern "C" unsigned char button_state[3];
+extern "C" unsigned short button_state[3];
+static void updateButtonState();
+static void applyPadType();
 
 static unsigned int drawFrame = 1;
 static int frame = 0;
@@ -179,6 +181,7 @@ const int8_t g_settings_visibility_md[MOPT_COUNT] = {
     [MOPT_SERIAL_KEYBOARD]           = 0,  // TI-99/4A only
     [MOPT_SPRITE_LIMIT]              = 0,  // NES only
     [MOPT_MENU_OVERSCAN]             = 0,  // Overscan in menu (menu.cpp force-shows this below the menu colors)
+    [MOPT_GENESIS_PAD]               = 1,  // 3 or 6 button pad
 };
 
 const uint8_t g_available_screen_modes_md[] = {
@@ -419,6 +422,7 @@ int ProcessAfterFrameIsRendered()
     // Poll Wii pad once per frame (function called once per rendered frame)
     wiipad_raw_cached = wiipad_read();
 #endif
+    updateButtonState();
 #if ENABLE_VU_METER
     if (isVUMeterToggleButtonPressed())
     {
@@ -446,6 +450,7 @@ int ProcessAfterFrameIsRendered()
             resetGame = true;
         }
         audio_enabled = settings.flags.audioEnabled;
+        applyPadType(); // the Genesis pad setting may have changed
         // Reset next frame time for FPS limiter
         next_frame_time = 0;
     }
@@ -457,6 +462,9 @@ static DWORD prevButtons[2]{};
 static int rapidFireMask[2]{};
 static int rapidFireCounter = 0;
 
+/* Button bits on the way from the pads to the core. The low byte uses the
+   menu's layout for SELECT, START and the d-pad, so the GPIO pads' word can be
+   masked straight into it; A B C X Y Z are the Genesis buttons. */
 static constexpr int LEFT = 1 << 6;
 static constexpr int RIGHT = 1 << 7;
 static constexpr int UP = 1 << 4;
@@ -466,6 +474,13 @@ static constexpr int START = 1 << 3;
 static constexpr int A = 1 << 0;
 static constexpr int B = 1 << 1;
 static constexpr int C = 1 << 8;
+static constexpr int X = 1 << 9;
+static constexpr int Y = 1 << 10;
+static constexpr int Z = 1 << 11;
+/* Button1 in the README (the menu's "back" button). It never reaches the core:
+   it keeps START + Button1 on the same physical button on every pad, whichever
+   Genesis button that is in a game. */
+static constexpr int HOT1 = 1 << 12;
 
 void toggleScreenMode()
 {
@@ -484,113 +499,154 @@ void toggleScreenMode()
 #endif
 }
 
-static inline int mapWiipadButtons(uint16_t buttonData)
-{
-    int mapped = 0;
-    // swap A and B buttons
-    if (buttonData & A)
-    {
-        mapped |= B;
-    }
-    if (buttonData & B)
-    {
-        mapped |= A;
-    }
-    if (buttonData & SELECT)
-    {
-        mapped |= SELECT;
-    }
-    if (buttonData & START)
-    {
-        mapped |= START;
-    }
-    if (buttonData & UP)
-    {
-        mapped |= UP;
-    }
-    if (buttonData & DOWN)
-    {
-        mapped |= DOWN;
-    }
-    if (buttonData & LEFT)
-    {
-        mapped |= LEFT;
-    }
-    if (buttonData & RIGHT)
-    {
-        mapped |= RIGHT;
-    }
-    if (buttonData & C)
-    {
-        mapped |= C;
-    }
-    return mapped;
-}
-
-/* Some pads have no third button at all: the vintage NES controller on the
-   GPIO port and the AliExpress Manta in NES mode. For those, SELECT doubles as
-   the Genesis C button while a game runs - the menu is unaffected, it reads the
-   pads through its own code and keeps SELECT for itself.
+/* SELECT doubles as a Genesis button on pads that are one short: as A on a
+   NES pad (it has only B and A, which play Genesis B and C), and as C on a GPIO
+   pad that has not identified itself (see nesPadButtons()). The menu is
+   unaffected, it reads the pads through its own code and keeps SELECT for
+   itself.
 
    The SELECT bit is deliberately left in place, so every in-game SELECT+...
-   hotkey keeps working. C is only withheld while START is held down, so
-   SELECT+START opens the settings menu without pressing C on its way out. */
-static inline int selectActsAsC(int bits)
+   hotkey keeps working. The button is only withheld while START is held down,
+   so SELECT+START opens the settings menu without pressing it on the way out. */
+static inline int selectDoublesAs(int bits, int button)
 {
-    return ((bits & SELECT) && !(bits & START)) ? (bits | C) : bits;
+    return ((bits & SELECT) && !(bits & START)) ? (bits | button) : bits;
+}
+
+/* In-game layout. Genesis pads are used as they are. Every other pad maps by
+   position, the way Genesis Plus GX does: the SNES layout's Y B A play Genesis
+   A B C and L X R play X Y Z, and the other pads follow from which of their
+   buttons sit where SNES Y B A X L R do (XInput X A B Y LB RB, PlayStation
+   Square Cross Circle Triangle L1 R1). NES pads have only B and A for Genesis
+   B and C, with SELECT as A. */
+
+/* Wii Classic and SNES Classic pads, wiipad_read() layout: bit0=A 1=B
+   2=Select 3=Start 4-7=d-pad 8=X 9=Y 10=L 11=R. */
+static inline int mapWiipadButtons(uint16_t w)
+{
+    int v = w & (SELECT | START | UP | DOWN | LEFT | RIGHT);
+    if (w & (1u << 9))
+        v |= A; // Y
+    if (w & (1u << 1))
+        v |= B | HOT1; // B
+    if (w & (1u << 0))
+        v |= C; // A
+    if (w & (1u << 10))
+        v |= X; // L
+    if (w & (1u << 8))
+        v |= Y; // X
+    if (w & (1u << 11))
+        v |= Z; // R
+    return v;
+}
+
+static inline bool isGenesisPad(const char *name)
+{
+    return name && (strncmp(name, "Genesis", 7) == 0 || strcmp(name, "MDArcade") == 0);
+}
+
+/* One USB pad or keyboard. hid_app.cpp reports the bottom face button as A,
+   the right one as B, the top one as X and the left one as Y; Genesis pads
+   report their own names. */
+static int mapUsbButtons(const io::GamePadState &gp)
+{
+    using Btn = io::GamePadState::Button;
+    const uint32_t b = gp.buttons;
+    const char *name = gp.GamePadName;
+    int v = (b & Btn::LEFT ? LEFT : 0) |
+            (b & Btn::RIGHT ? RIGHT : 0) |
+            (b & Btn::UP ? UP : 0) |
+            (b & Btn::DOWN ? DOWN : 0) |
+            (b & Btn::SELECT ? SELECT : 0) |
+            (b & Btn::START ? START : 0) |
+            (b & Btn::A ? HOT1 : 0) |
+            // Only Genesis pads, keyboard E and generic HID joysticks set these.
+            (b & Btn::C ? C : 0) |
+            (b & Btn::Z ? Z : 0);
+    if (isGenesisPad(name))
+    {
+        v |= (b & Btn::A ? A : 0) | (b & Btn::B ? B : 0) |
+             (b & Btn::X ? X : 0) | (b & Btn::Y ? Y : 0);
+    }
+    else if (name && strcmp(name, "Keyboard") == 0)
+    {
+        // Z X C = A B C and Q W E = X Y Z: keyboard rows, not pad positions.
+        v |= (b & Btn::A ? A : 0) | (b & Btn::B ? B : 0) | (b & Btn::X ? C : 0) |
+             (b & Btn::L ? X : 0) | (b & Btn::R ? Y : 0);
+    }
+    else if (name && strcmp(name, "Manta NES") == 0)
+    {
+        // AliExpress NES pad: A is NES B, B is NES A.
+        v |= (b & Btn::A ? B : 0) | (b & Btn::B ? C : 0);
+        v = selectDoublesAs(v, A);
+    }
+    else
+    {
+        v |= (b & Btn::Y ? A : 0) | (b & Btn::A ? B : 0) | (b & Btn::B ? C : 0) |
+             (b & Btn::L ? X : 0) | (b & Btn::X ? Y : 0) | (b & Btn::R ? Z : 0);
+    }
+    return v;
 }
 
 #if NES_PIN_CLK != -1
-/* One GPIO pad's buttons, with SELECT promoted to C.
+/* One GPIO pad.
 
-   Read through the full 12-button word, so both pad types reach the Genesis
-   buttons their labels promise, matching what the USB pads already do in
-   hid_app.cpp: the leftmost/bottom button is Genesis A and the one to the
-   right of it is Genesis B, i.e. NES B -> A, NES A -> B and SNES B -> A,
-   SNES A -> B, with SNES X on C. The pad shifts its buttons out in the order
-   bit0=B 1=Y 2=Select 3=Start 4=Up 5=Down 6=Left 7=Right 8=A 9=X 10=L 11=R on
-   a SNES pad, and bit0=A 1=B then the same Select/Start/dpad on a NES one.
-   Bits 2-7 therefore mean the same thing on both and already sit on the
-   constants above, so they pass straight through as a mask. SNES Y, L and R
-   have nowhere to go - the core is a 3-button pad.
+   The pad shifts its buttons out in the order bit0=B 1=Y 2=Select 3=Start
+   4=Up 5=Down 6=Left 7=Right 8=A 9=X 10=L 11=R on a SNES pad, and bit0=A 1=B
+   then the same Select/Start/d-pad on a NES one. Bits 2-7 therefore mean the
+   same thing on both and already sit on the constants above, so they pass
+   straight through as a mask.
 
    Bits 0 and 1 are the two that swap meaning, so they need to know which pad
    is on the wire. Only a NES pad can say so: it grounds the shift register's
    unused outputs, which the driver sees as the ID nibble on every single read,
-   so NESPAD_TYPE_NES is not a guess and needs no button press first. Anything
-   else is taken for a SNES pad, which is what an idle SNES pad and an active
-   8-bit-only adapter cable both need - the cost is that an aftermarket NES pad
-   that leaves those outputs floating cannot be recognised and loses B.
+   so NESPAD_TYPE_NES is not a guess and needs no button press first. It plays
+   NES B = Genesis B, NES A = C and SELECT = A.
 
-   SELECT still doubles as C for every pad on the port, SNES ones included -
-   see selectActsAsC() above. */
+   Anything else gets the SNES layout, which is what a SNES pad (idle or not)
+   and an 8-bit SNES->NES adapter cable both need. It also covers an
+   aftermarket NES pad that leaves those outputs floating and so cannot be
+   recognised: there bit0 is NES A and bit1 NES B, which the SNES layout
+   plays as Genesis B and A, and SELECT doubles as C, so all three buttons
+   stay in reach (#28, #34). */
 static inline int nesPadButtons(int pad)
 {
     const uint16_t ext = nespad_states_ext[pad];
+    const uint8_t type = nespad_padtype[pad];
     int v = ext & (SELECT | START | UP | DOWN | LEFT | RIGHT); // same bits on both pads
-    if (nespad_padtype[pad] == NESPAD_TYPE_NES)
+    if (type == NESPAD_TYPE_NES)
     {
-        if (ext & (1u << 0))
-            v |= B; // NES A
         if (ext & (1u << 1))
-            v |= A; // NES B
-    }
-    else
-    {
+            v |= B | HOT1; // NES B
         if (ext & (1u << 0))
-            v |= A; // SNES B
-        if (ext & (1u << 8))
-            v |= B; // SNES A
-        if (ext & (1u << 9))
-            v |= C; // SNES X
-        // bit1 is SNES Y - no fourth button to put it on.
+            v |= C; // NES A
+        return selectDoublesAs(v, A);
     }
-    return selectActsAsC(v);
+    // Button1 is whatever the menu treats as "back": B on a proven SNES pad,
+    // bit1 (NES B, or SNES Y on an idle SNES pad) until then.
+    if (ext & (1u << 1))
+        v |= A | (type == NESPAD_TYPE_SNES ? 0 : HOT1); // SNES Y
+    if (ext & (1u << 0))
+        v |= B | (type == NESPAD_TYPE_SNES ? HOT1 : 0); // SNES B
+    if (ext & (1u << 8))
+        v |= C; // SNES A
+    if (ext & (1u << 10))
+        v |= X; // SNES L
+    if (ext & (1u << 9))
+        v |= Y; // SNES X
+    if (ext & (1u << 11))
+        v |= Z; // SNES R
+    return selectDoublesAs(v, C);
 }
 #endif
 
-/* Core callback: refresh button_state[] (active low, S A C B R L D U). */
-extern "C" void gwenesis_io_get_buttons()
+/* Refresh button_state[] (active low, M X Y Z S A C B R L D U) and run the
+   in-game hotkeys. Called once per frame from ProcessAfterFrameIsRendered(),
+   right after the pads have been polled: none of the sources changes anywhere
+   else, so doing this on every pad read, as the core's callback would, only
+   costs time - and a 6-button game reads the port several times per frame.
+   It also keeps the hotkeys working while a game is not reading the pad. */
+static void updateButtonState()
 {
     char timebuf[10];
     bool usbConnected = false;
@@ -601,25 +657,7 @@ extern "C" void gwenesis_io_get_buttons()
         {
             usbConnected = gp.isConnected();
         }
-        int v = (gp.buttons & io::GamePadState::Button::LEFT ? LEFT : 0) |
-                (gp.buttons & io::GamePadState::Button::RIGHT ? RIGHT : 0) |
-                (gp.buttons & io::GamePadState::Button::UP ? UP : 0) |
-                (gp.buttons & io::GamePadState::Button::DOWN ? DOWN : 0) |
-                (gp.buttons & io::GamePadState::Button::A ? A : 0) |
-                (gp.buttons & io::GamePadState::Button::B ? B : 0) |
-                (gp.buttons & io::GamePadState::Button::X ? C : 0) | // X button maps to C button on non-genesis controllers
-                (gp.buttons & io::GamePadState::Button::C ? C : 0) |
-                (gp.buttons & io::GamePadState::Button::SELECT ? SELECT : 0) |
-                (gp.buttons & io::GamePadState::Button::START ? START : 0) |
-                0;
-
-        // The Manta reports as a NES pad in its NES mode, and then has no
-        // button that can reach C. Applied per source, so a pad with a real C
-        // sharing the same player slot keeps its own SELECT.
-        if (gp.GamePadName && strcmp(gp.GamePadName, "Manta NES") == 0)
-        {
-            v = selectActsAsC(v);
-        }
+        int v = mapUsbButtons(gp);
 
 #if NES_PIN_CLK != -1
         // When USB controller is connected both NES ports act as controller 2
@@ -707,7 +745,7 @@ extern "C" void gwenesis_io_get_buttons()
         if (p1 & START)
         {
             // Toggle frame rate display
-            if (pushed & A)
+            if (pushed & HOT1)
             {
                 settings.flags.displayFrameRate = !settings.flags.displayFrameRate;
                 printf("FPS: %s\n", settings.flags.displayFrameRate ? "ON" : "OFF");
@@ -728,16 +766,56 @@ extern "C" void gwenesis_io_get_buttons()
             }
         }
         prevButtons[i] = v;
-        button_state[i] = ((v & LEFT) ? 1 << PAD_LEFT : 0) |
-                          ((v & RIGHT) ? 1 << PAD_RIGHT : 0) |
-                          ((v & UP) ? 1 << PAD_UP : 0) |
-                          ((v & DOWN) ? 1 << PAD_DOWN : 0) |
-                          ((v & START) ? 1 << PAD_S : 0) |
-                          ((v & A) ? 1 << PAD_A : 0) |
-                          ((v & B) ? 1 << PAD_B : 0) |
-                          ((v & C) ? 1 << PAD_C : 0);
-        button_state[i] = ~button_state[i];
+        // Mode (PAD_M) is never pressed: the pads' MODE and SELECT buttons are
+        // the hotkey button, and hardly any game reads Mode.
+        button_state[i] = (unsigned short)~(((v & LEFT) ? 1 << PAD_LEFT : 0) |
+                                            ((v & RIGHT) ? 1 << PAD_RIGHT : 0) |
+                                            ((v & UP) ? 1 << PAD_UP : 0) |
+                                            ((v & DOWN) ? 1 << PAD_DOWN : 0) |
+                                            ((v & START) ? 1 << PAD_S : 0) |
+                                            ((v & A) ? 1 << PAD_A : 0) |
+                                            ((v & B) ? 1 << PAD_B : 0) |
+                                            ((v & C) ? 1 << PAD_C : 0) |
+                                            ((v & X) ? 1 << PAD_X : 0) |
+                                            ((v & Y) ? 1 << PAD_Y : 0) |
+                                            ((v & Z) ? 1 << PAD_Z : 0));
     }
+}
+
+/* Core callback, run on every pad read. button_state[] is already current:
+   updateButtonState() refreshes it once per frame. */
+extern "C" void gwenesis_io_get_buttons()
+{
+}
+
+/* Cartridge header, I/O support field ($190-$19F): '6' means the game knows
+   the 6-button pad. The rom sits byte-swapped for the core's 16-bit fetches
+   (see hdr8() in port/gwsram.c), hence the ^ 1. */
+static bool romListsSixButtonPad(const unsigned char *rom)
+{
+    for (uint32_t off = 0x190; off < 0x1A0; off++)
+    {
+        if (rom[off ^ 1] == '6')
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool romSixButton = false;
+
+/* Present 3- or 6-button pads per settings.flags.genesisPad: 0 = Auto (the
+   cartridge header decides), 1 = 3 button, 2 = 6 button. 3 buttons is the safe
+   choice for the rest: some 3-button games misread a 6-button pad, as they do
+   on real hardware. */
+static void applyPadType()
+{
+    bool six = settings.flags.genesisPad == 2 || (settings.flags.genesisPad == 0 && romSixButton);
+    gwenesis_io_set_six_button(0, six);
+    gwenesis_io_set_six_button(1, six);
+    printf("Pads: %d button (setting %d, header %s)\n", six ? 6 : 3,
+           settings.flags.genesisPad, romSixButton ? "lists 6 button" : "3 button");
 }
 
 /* ------------------------------------------------------------------ */
@@ -1709,6 +1787,8 @@ int main()
             load_cartridge((const unsigned char *)romAddr, romSize);
             power_on();
             reset_emulation();
+            romSixButton = romListsSixButtonPad((const unsigned char *)romAddr);
+            applyPadType(); /* after reset_emulation(), which resets the pads to 3 buttons */
             loadCartSram();
             Frens::dumpHeapStats("game start"); /* peak usage, both heaps */
             startAudioSinks();                  /* must precede gwsnd_init */

@@ -28,6 +28,9 @@ void gwenesis_io_write_ctrl(unsigned int address, unsigned int value);
 unsigned int gwenesis_io_read_ctrl(unsigned int address);
 
 void gwenesis_io_reset(void);
+/* Present a 6-button pad on port 1 (pad 0) or 2 (pad 1) instead of a 3-button
+   one. gwenesis_io_reset() switches both back to 3 buttons. */
+void gwenesis_io_set_six_button(int pad, int enable);
 void gwenesis_io_set_reg(unsigned int reg, unsigned int value);
 void gwenesis_io_get_buttons();
 

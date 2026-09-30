@@ -237,11 +237,13 @@ Supported controllers:
 - Xbox style controllers (XInput)
 - Genesis Mini 1 and 2, and the [Retro-Bit 8 button Arcade Pad with USB](https://www.retro-bit.com/controllers/genesis/#usb)
 - NES and SNES controllers on the GPIO port of a PCB or breadboard setup
-- AliExpress NES and SNES USB controllers. On the SNES one you have to press Y once every time a game starts or the menu opens, otherwise the B button stays dead.
+- AliExpress NES and SNES USB controllers
 - Fruit Jam: SNES Classic and Wii Classic Pro controllers over I2C. Connect the controller to an [Adafruit Wii Nunchuck Breakout Adapter](https://www.adafruit.com/product/4836).
 - USB keyboard
 
-The three Genesis buttons are called Button1, Button2 and Button3 throughout this readme:
+### Buttons in the menu
+
+The menus use three buttons, called Button1, Button2 and Button3 throughout this readme:
 
 |     | (S)NES | Genesis | XInput | Dual Shock/Sense |
 | --- | ------ | ------- | ------ | ---------------- |
@@ -250,17 +252,44 @@ The three Genesis buttons are called Button1, Button2 and Button3 throughout thi
 | Button3 | X (SNES only)  |    C    |   Y    |   Triangle       |
 | Select  | select | Mode (C on a 3 button controller) | Select | Select     |
 
-### Controllers without a third button
+### Buttons in a game
 
-Some controllers have no button that can reach the Genesis C button. For those, **SELECT doubles as C while a game runs**. SELECT keeps all its other jobs, and C is not sent while START is held, so SELECT + START still opens the settings menu.
+Genesis controllers are used as they are. Every other controller is mapped by the position of its buttons: Genesis A, B and C are the left, bottom and right face buttons, and Genesis X, Y and Z are the left shoulder button, the top face button and the right shoulder button.
 
-This applies to the vintage NES controller on the NES/SNES GPIO port, which has only two buttons (A and B, plus Select, Start and the d-pad), and to the AliExpress NES USB controller. SNES controllers are unaffected either way: they have a real X button, on the GPIO port as well as over USB.
+| Genesis | Genesis Mini 2, Retro-Bit Arcade Pad | SNES, Wii Classic | NES | XInput | Dual Shock/Sense | Keyboard |
+| ------- | ------------------------------------ | ----------------- | --- | ------ | ---------------- | -------- |
+| A       | A | Y | Select | X  | Square   | Z |
+| B       | B | B | B      | A  | Cross    | X |
+| C       | C | A | A      | B  | Circle   | C |
+| X       | X | L | –      | LB | L1       | Q |
+| Y       | Y | X | –      | Y  | Triangle | W |
+| Z       | Z | R | –      | RB | R1       | E |
+| Start   | Start | Start | Start | Start | Options | S |
+
+X, Y and Z only reach games that use a 6 button pad, see [3 and 6 button games](#3-and-6-button-games). The Genesis Mini 1 has A, B and C only, and the PSClassic controller has no buttons for X and Z. The Mode button is not passed to games; like SELECT on the other controllers, it is used for the [in-game shortcuts](#while-a-game-is-running).
+
+### NES controllers
+
+A NES controller has only two buttons, which play Genesis B and C. **SELECT doubles as the Genesis A button while a game runs.** SELECT keeps all its other jobs, and A is not sent while START is held, so SELECT + START still opens the settings menu.
+
+This applies to the NES controller on the NES/SNES GPIO port and to the AliExpress NES USB controller.
+
+### 3 and 6 button games
+
+The Genesis had two controllers: the original one with three buttons, and a later one with six. Games made for six buttons, such as *Super Street Fighter II*, detect which one is connected. Some older games do not work correctly with a 6 button controller, on the original console as well.
+
+**Genesis pad** in the settings menu selects the controller a game sees:
+
+- **Auto** (default): a 6 button controller for games whose cartridge header says they support one, a 3 button controller for all other games.
+- **3 button** or **6 button**: that controller for every game.
+
+Choose **6 button** for a game that supports six buttons without saying so in its header. Some games look for the controller only when they start, so reset the game after changing the setting.
 
 ### NES and SNES pads on the GPIO port
 
-The two sockets speak one protocol but the pads send their buttons in a different order, so the port works out for itself which one is plugged in. A NES pad says so on every read, and anything else is taken for a SNES pad — including a SNES pad behind a home-made adapter cable, which works fully from the first button press with no need to wake it up first. Both then get the mapping from the table above: on a NES pad B is Genesis A and A is Genesis B, and on a SNES pad B is Genesis A, A is Genesis B and X is Genesis C. SNES Y, L and R are not used, because the Genesis pad only has three buttons.
+The two sockets speak one protocol but the pads send their buttons in a different order, so the port works out for itself which one is plugged in. A NES pad says so on every read, and anything else is taken for a SNES pad — including a SNES pad behind a home-made adapter cable, which works fully from the first button press with no need to wake it up first. Both then get the mapping from the [table above](#buttons-in-a-game). On a SNES pad on this port SELECT also acts as Genesis C, for the reason below.
 
-One caveat: a NES pad is recognised by grounding the shift register outputs it does not use, which is what an original Nintendo pad does, and most aftermarket ones with it. A clone that leaves them floating cannot be told from a SNES pad, and its B button will do nothing. Its A button and SELECT still work, so it stays usable. To check a pad, open **Settings > Controller Test**, press a button and look at the `Sent by pad:` line — a top digit of `F` means the pad identifies itself properly. ([#28](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/28))
+One caveat: a NES pad is recognised by grounding the shift register outputs it does not use, which is what an original Nintendo pad does, and most aftermarket ones with it. A clone that leaves them floating cannot be told from a SNES pad. It keeps all three Genesis buttons, but in other places: B is Genesis A, A is Genesis B and SELECT is Genesis C. To check a pad, open **Settings > Controller Test**, press a button and look at the `Sent by pad:` line — a top digit of `F` means the pad identifies itself properly. ([#28](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/28), [#34](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/34))
 
 ## Menu
 
@@ -271,7 +300,7 @@ Gamepad buttons:
 - Button1: back to the parent folder.
 - START: show [box art and game info](#box-art-and-game-info).
 - Button3: show the list of [recently played games](#recently-played-games).
-- SELECT: open the settings menu. Here you can change things like the screen mode, scanlines, the game sound, [frame skip](#frame-skip), [usb drive mode](#usb-drive-mode), the framerate display, the menu colours, the overscan fix for the menus and settings specific to your board. The same menu can be opened while a game is running.
+- SELECT: open the settings menu. Here you can change things like the screen mode, scanlines, the game sound, [frame skip](#frame-skip), [usb drive mode](#usb-drive-mode), the framerate display, the [Genesis pad](#3-and-6-button-games), the menu colours, the overscan fix for the menus and settings specific to your board. The same menu can be opened while a game is running.
 
 **Overscan fix in menu** is meant for TVs that cut off the edges of the picture: **Rows** leaves the top and bottom text rows of the menus blank, **Rows & columns** also leaves the first and last columns blank. The effect is shown while the setting is changed, and it applies to the menus only, not to the game picture. The color palette is shown only while one of the two menu color entries is selected, which leaves room for more entries on one page. In the settings menu, press SELECT on any setting to jump straight to the SAVE/CANCEL/DEFAULT row. Changes are only applied when **SAVE** is selected.
 
@@ -343,16 +372,15 @@ Gamepad buttons:
   - START + LEFT / START + RIGHT: volume down and up.
   - SELECT + RIGHT, or pushbutton 2 on the board: turn the VU meter on or off (the NeoPixel LEDs light up in time with the music).
   - pushbutton 1 on the board: mute the built-in speaker. Sound keeps coming out of the audio jack.
-- **Controllers without a third button**: SELECT on its own acts as the C button, see [above](#controllers-without-a-third-button). All the SELECT + ... combinations keep working.
-- **Genesis Mini controller**: on the 3 button version, press C for SELECT. On 8 button Genesis controllers, press MODE.
+- **NES controllers**: SELECT on its own acts as the Genesis A button, see [above](#nes-controllers). All the SELECT + ... combinations keep working.
+- **Genesis Mini controller**: on the 3 button version, press C for SELECT. On the 6 button version and the 8 button Arcade Pad, press MODE.
 
 When using a USB keyboard:
 - Cursor keys: up, down, left, right
 - A: SELECT
 - S: START
-- Z: Button1
-- X: Button2
-- C: Button3
+- Z, X, C: Genesis A, B, C
+- Q, W, E: Genesis X, Y, Z
 
 ## Saved games
 
@@ -384,7 +412,7 @@ Download the metadata pack from the [releases page](https:///github.com/PicoPlus
 - **77.1 Hz on non-HSTX boards**, which not every monitor accepts. See the [warning above](#supported-boards) and [#4](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/4).
 - **Games run slower on PicoDVI boards.** Boards without HSTX cannot keep up with full speed, see [Speed on PicoDVI boards](#speed-on-picodvi-boards).
 - **Mega Drive roms only.** Files that are not Mega Drive roms are refused with a message instead of starting the emulator on whatever the file happens to contain.
-- **A NES pad clone on the GPIO port may lose its B button.** The port tells NES and SNES pads apart by the shift register outputs a NES pad does not use, which an original Nintendo pad grounds. A clone that leaves them floating is taken for a SNES pad, and on a SNES pad that button is Y, which the Genesis has nowhere to put. Its A button and SELECT still work, and the pad works normally in the menu — only in-game B is dead. See [NES and SNES pads on the GPIO port](#nes-and-snes-pads-on-the-gpio-port). ([#28](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/28))
+- **A NES pad clone on the GPIO port may get a different button layout.** The port tells NES and SNES pads apart by the shift register outputs a NES pad does not use, which an original Nintendo pad grounds. A clone that leaves them floating is taken for a SNES pad: all three Genesis buttons still work, but B is Genesis A, A is Genesis B and SELECT is Genesis C. See [NES and SNES pads on the GPIO port](#nes-and-snes-pads-on-the-gpio-port). ([#28](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/28))
 
 ## For developers
 

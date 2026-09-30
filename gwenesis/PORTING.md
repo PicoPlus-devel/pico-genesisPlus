@@ -87,6 +87,8 @@ and the sound-seam prototypes (`gwsnd_ym_write` / `gwsnd_ym_read` /
     the bank registers `$A130F3-$FF`.
 
 ### `bus/gwenesis_bus.h`
+- `enum gwenesis_bus_pad_button` gains `PAD_Z`, `PAD_Y`, `PAD_X`, `PAD_M`
+  (bits 8-11 of `button_state[]`, see `io/gwenesis_io.c`).
 - `GWENESIS_AUDIO_BUFFER_LENGTH_PAL` 1056 → **1072**: a PAL frame
   generates up to 313·3420/1009 = 1060.9 samples; upstream's end-of-frame
   top-up overflowed both audio buffers by ~5 samples.
@@ -228,6 +230,22 @@ and the sound-seam prototypes (`gwsnd_ym_write` / `gwsnd_ym_read` /
   direction / TH-select masks and mis-read the pads at boot (Space
   Invaders '91 rendered corrupt when launched after another game). The
   region/version byte is preserved because `set_region()` sets it per ROM.
+- **6-button pad** (upstream only has the 3-button protocol). `button_state[]`
+  widens from `unsigned char` to `unsigned short`: the low byte is unchanged
+  (S A C B R L D U), bits 8-11 carry Z Y X Mode, PicoDrive's MXYZ layout.
+  `gwenesis_io_set_six_button(pad, on)` switches ports 1 and 2; with it off the
+  read path is the upstream one, bit for bit. With it on, TH rising edges on
+  the data port are counted as in PicoDrive (`read_pad_6btn()`,
+  `io_ports_write()`): the third TH-low read returns `SA 0000` (the 6-button
+  ID), the TH-high read after it `CB MXYZ`, the next TH-low read `SA 1111`.
+  The count restarts once the data port has not been written for more than
+  25 lines (~1.6 ms, PicoDrive's `PAD_DELAY`), checked lazily from the
+  `(frame_counter, scan_line)` stamp of the last write, so the frame loop needs
+  no per-line hook. `gwenesis_io_reset()` clears the count and switches both
+  ports back to 3 buttons; the port sets the pad type after
+  `reset_emulation()`. Verified with `GEN_PAD_SELFTEST=1` (every read of the
+  sequence plus the reset, within a frame and across NTSC and PAL frame
+  ends) and the *6 Button Controller Demo* ROM, which prints each TH cycle.
 
 ### `vdp/gwenesis_vdp_mem.c`
 - `VRAM` → extern pointer (port-allocated).

@@ -20,15 +20,56 @@ __license__ = "GPLv3"
 #include <stdio.h>
 #include <string.h>
 #include "gwenesis_io.h"
+#include "gwenesis_bus.h"
 #include "gwenesis_savestate.h"
 
-unsigned char button_state[3]= {0xff,0xff,0xff};
+/* Button mapping (active low)
+   11 10 9 8 7 6 5 4 3 2 1 0
+    M  X Y Z S A C B R L D U
+   Bits 8-11 are only read by a pad in 6-button mode. */
+unsigned short button_state[3]= {0xffff,0xffff,0xffff};
 
-/* Button mapping 
-    7 6 5 4 3 2 1 0
-Start A B C R L D U 
-*/
 static unsigned char gwenesis_io_pad_state[3] = {0x33,0x33,0x33};
+
+/* 6-button pad (ports 1 and 2). The pad counts TH rising edges written to
+   its data port: on the third TH-low read it returns the four direction bits
+   low (the 6-button ID), on the TH-high read that follows X Y Z Mode instead
+   of the d-pad, and on the TH-low read after that all four bits high. The
+   count restarts when the data port has not been written for about 1.5 ms,
+   which games rely on between frames. Timing follows PicoDrive: 25 lines. */
+#define GWENESIS_IO_TH_TIMEOUT_LINES 25
+static unsigned char pad_six_button[2];
+static unsigned char pad_th_phase[2];
+static int pad_th_frame[2];
+static int pad_th_line[2];
+
+extern int scan_line;
+extern int frame_counter;
+extern unsigned short gwenesis_vdp_status;
+
+/* Evaluated lazily from the (frame, line) stamp of the last data write, so
+   the frame loop needs no per-line hook. */
+static int gwenesis_io_th_timed_out(int pad)
+{
+    int lines;
+    int frames = frame_counter - pad_th_frame[pad];
+    if (frames == 0)
+        lines = scan_line - pad_th_line[pad];
+    else if (frames == 1)
+        lines = scan_line + ((gwenesis_vdp_status & 1) ? LINES_PER_FRAME_PAL : LINES_PER_FRAME_NTSC)
+                - pad_th_line[pad];
+    else
+        return 1;
+    return lines > GWENESIS_IO_TH_TIMEOUT_LINES;
+}
+
+void gwenesis_io_set_six_button(int pad, int enable)
+{
+    if (pad < 0 || pad > 1)
+        return;
+    pad_six_button[pad] = enable ? 1 : 0;
+    pad_th_phase[pad] = 0;
+}
 
 #define GWENESIS_IO_VERSION 0x81 /* oversea NTSC model version 81 */
 /*
@@ -155,9 +196,15 @@ void gwenesis_io_reset(void)
     gwenesis_io_pad_state[1] = 0x33;
     gwenesis_io_pad_state[2] = 0x33;
 
-    button_state[0] = 0xff;
-    button_state[1] = 0xff;
-    button_state[2] = 0xff;
+    button_state[0] = 0xffff;
+    button_state[1] = 0xffff;
+    button_state[2] = 0xffff;
+
+    /* Back to 3-button pads: the port sets the pad type per game after this. */
+    memset(pad_six_button, 0, sizeof(pad_six_button));
+    memset(pad_th_phase, 0, sizeof(pad_th_phase));
+    memset(pad_th_frame, 0, sizeof(pad_th_frame));
+    memset(pad_th_line, 0, sizeof(pad_th_line));
 }
 
 void gwenesis_io_pad_release_button(int pad, int button)
@@ -182,20 +229,32 @@ static inline void gwenesis_io_pad_write(int pad, int value)
 static inline  unsigned char gwenesis_io_pad_read(int pad)
 {
     unsigned char value;
- 
+    int phase = 0;
+
     /* get host button */
     gwenesis_io_get_buttons();
+
+    if (pad < 2 && pad_six_button[pad] && !gwenesis_io_th_timed_out(pad))
+        phase = pad_th_phase[pad];
 
     value = gwenesis_io_pad_state[pad] & 0x40;
     value |= 0x3f;
 
     if (value & 0x40)
     {
-        value &= (button_state[pad] & 0x3f);
+        if (phase == 3)
+            value &= (button_state[pad] & 0x30) | ((button_state[pad] >> 8) & 0x0f); /* C B M X Y Z */
+        else
+            value &= (button_state[pad] & 0x3f);
     }
     else
     {
-        value &= ((button_state[pad] & 3) | ((button_state[pad] >> 2) & 0x30));
+        if (phase == 2)
+            value &= ((button_state[pad] >> 2) & 0x30);        /* S A 0 0 0 0: 6-button ID */
+        else if (phase == 3)
+            value &= ((button_state[pad] >> 2) & 0x30) | 0x0f; /* S A 1 1 1 1 */
+        else
+            value &= ((button_state[pad] & 3) | ((button_state[pad] >> 2) & 0x30));
     }
     return value;
 }
@@ -204,10 +263,20 @@ void gwenesis_io_write_ctrl(unsigned int address, unsigned int value)
 {
 
     address >>= 1;
- 
+
     // JOYPAD DATA
     if (address >= 0x1 && address <= 0x3)
     {
+        int pad = address - 1;
+        if (pad < 2 && pad_six_button[pad])
+        {
+            if (gwenesis_io_th_timed_out(pad))
+                pad_th_phase[pad] = 0;
+            if (!(io_reg[address] & 0x40) && (value & 0x40) && pad_th_phase[pad] < 0xff)
+                pad_th_phase[pad]++;
+            pad_th_frame[pad] = frame_counter;
+            pad_th_line[pad] = scan_line;
+        }
 
         io_reg[address] = value;
         gwenesis_io_pad_write(address - 1, value);

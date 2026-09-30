@@ -25,6 +25,18 @@ Input injection (frame ranges, inclusive):
                                 (several ranges: "120:125,300:305")
     GEN_PRESS_A="200:220"       hold A on pad 0
     GEN_PRESS_B / GEN_PRESS_C   likewise
+    GEN_PRESS_X / _Y / _Z / _MODE
+                                likewise; a game only sees these
+                                with GEN_PAD=6
+
+6-button pad:
+    GEN_PAD=6                   present 6-button pads on both ports
+                                (default 3, as upstream)
+    GEN_PAD_SELFTEST=1          drive the TH protocol through the I/O
+                                registers and check every read of a
+                                6-button and a 3-button sequence, including
+                                the ~1.5 ms reset, then exit (status 0 =
+                                pass). No frames are run.
 
 Split ROM storage (the firmware keeps a ROM too big for PSRAM as a head in
 flash plus a tail in PSRAM, see romflash.cpp):
@@ -77,7 +89,7 @@ static wav_writer wav_mixed, wav_ym, wav_psg;
 
 /* ------------------------- input injection ------------------------- */
 
-extern unsigned char button_state[3];
+extern unsigned short button_state[3];
 
 typedef struct {
     int from, to, bit;
@@ -105,17 +117,27 @@ static void parse_press(const char *env, int bit)
     }
 }
 
-/* Core callback: refresh button_state (active low, S A C B R L D U). */
+/* Set by pad_selftest(): the buttons it holds down on both pads, overriding
+   the frame-range presses. */
+static int pad_selftest_active;
+static unsigned short pad_selftest_pressed;
+
+/* Core callback: refresh button_state (active low, M X Y Z S A C B R L D U). */
 void gwenesis_io_get_buttons(void)
 {
-    unsigned char pressed = 0;
+    unsigned short pressed = 0;
+    if (pad_selftest_active) {
+        button_state[0] = button_state[1] = (unsigned short)~pad_selftest_pressed;
+        button_state[2] = 0xffff;
+        return;
+    }
     for (int i = 0; i < press_count; i++) {
         if (current_frame_no >= presses[i].from && current_frame_no <= presses[i].to)
-            pressed |= (unsigned char)(1u << presses[i].bit);
+            pressed |= (unsigned short)(1u << presses[i].bit);
     }
-    button_state[0] = (unsigned char)~pressed;
-    button_state[1] = 0xff;
-    button_state[2] = 0xff;
+    button_state[0] = (unsigned short)~pressed;
+    button_state[1] = 0xffff;
+    button_state[2] = 0xffff;
 }
 
 /* --------------------------- audio sinks --------------------------- */
@@ -326,6 +348,170 @@ static int srm_selftest(void)
     return bad;
 }
 
+/* ----------------------- 6-button pad selftest ---------------------- */
+
+/* Pressed-button bits, same positions as button_state (1 = pressed). */
+enum { PB_U = 1 << 0, PB_D = 1 << 1, PB_L = 1 << 2, PB_R = 1 << 3,
+       PB_B = 1 << 4, PB_C = 1 << 5, PB_A = 1 << 6, PB_S = 1 << 7,
+       PB_Z = 1 << 8, PB_Y = 1 << 9, PB_X = 1 << 10, PB_M = 1 << 11 };
+
+enum pad_read_kind { RD_HIGH, RD_LOW, RD_ID, RD_XYZ, RD_LOW_ONES };
+
+/* What the pad drives on D0-D5 for one read, built bit by bit from the
+   button names in the Sega 6-button documentation (1 = released). */
+static unsigned expect_pad_bits(enum pad_read_kind kind, unsigned p)
+{
+#define REL(b) ((p & (b)) ? 0u : 1u)
+    switch (kind) {
+    case RD_HIGH:     /* ? 1 C B R L D U */
+        return REL(PB_U) | REL(PB_D) << 1 | REL(PB_L) << 2 | REL(PB_R) << 3 |
+               REL(PB_B) << 4 | REL(PB_C) << 5;
+    case RD_LOW:      /* ? 0 S A 0 0 D U */
+        return REL(PB_U) | REL(PB_D) << 1 | REL(PB_A) << 4 | REL(PB_S) << 5;
+    case RD_ID:       /* ? 0 S A 0 0 0 0 */
+        return REL(PB_A) << 4 | REL(PB_S) << 5;
+    case RD_XYZ:      /* ? 1 C B M X Y Z */
+        return REL(PB_Z) | REL(PB_Y) << 1 | REL(PB_X) << 2 | REL(PB_M) << 3 |
+               REL(PB_B) << 4 | REL(PB_C) << 5;
+    case RD_LOW_ONES: /* ? 0 S A 1 1 1 1 */
+        return 0x0f | REL(PB_A) << 4 | REL(PB_S) << 5;
+    }
+#undef REL
+    return 0;
+}
+
+static int pad_selftest_bad;
+
+/* Write TH through the data port of `port` (0 or 1), read it back and check
+   the result. TH is an output, so bit 6 reads back what was written. */
+static void pad_step(const char *what, int port, int th, enum pad_read_kind kind)
+{
+    unsigned data = 0x03 + port * 2;
+    gwenesis_io_write_ctrl(data, th ? 0x40 : 0x00);
+    unsigned got = gwenesis_io_read_ctrl(data);
+    unsigned want = (th ? 0x40u : 0u) | expect_pad_bits(kind, pad_selftest_pressed);
+    if (got != want) {
+        printf("padtest: %s: port %d TH=%d read %02x, expected %02x\n",
+               what, port + 1, th, got, want);
+        pad_selftest_bad++;
+    }
+}
+
+/* One complete read-out, starting from an idle pad with TH high. On a
+   6-button pad the third TH-low read is the ID, then X Y Z Mode. */
+static void pad_sequence(const char *what, int port, int six)
+{
+    pad_step(what, port, 1, RD_HIGH);
+    pad_step(what, port, 0, RD_LOW);
+    pad_step(what, port, 1, RD_HIGH);
+    pad_step(what, port, 0, RD_LOW);
+    pad_step(what, port, 1, RD_HIGH);
+    pad_step(what, port, 0, six ? RD_ID : RD_LOW);
+    pad_step(what, port, 1, six ? RD_XYZ : RD_HIGH);
+    pad_step(what, port, 0, six ? RD_LOW_ONES : RD_LOW);
+    pad_step(what, port, 1, RD_HIGH);
+}
+
+static int pad_selftest(void)
+{
+    static const unsigned patterns[] = {
+        0,
+        PB_A | PB_C | PB_U | PB_X | PB_Z,
+        PB_B | PB_S | PB_D | PB_R | PB_Y | PB_M,
+        0xfff,
+    };
+    pad_selftest_active = 1;
+    pad_selftest_bad = 0;
+
+    for (int port = 0; port < 2; port++) {
+        gwenesis_io_write_ctrl(0x09 + port * 2, 0x40); /* TH is an output */
+        for (unsigned i = 0; i < sizeof patterns / sizeof patterns[0]; i++) {
+            pad_selftest_pressed = (unsigned short)patterns[i];
+
+            /* 3-button pad: the extra TH cycles change nothing. */
+            gwenesis_io_set_six_button(port, 0);
+            frame_counter = 100; scan_line = 10;
+            pad_sequence("3-button", port, 0);
+
+            gwenesis_io_set_six_button(port, 1);
+            pad_sequence("6-button", port, 1);
+
+            /* No pause: the count carries on past the read-out and the pad
+               answers as a 3-button one until it resets. */
+            scan_line += 20;
+            pad_sequence("no reset after 20 lines", port, 0);
+
+            /* A pause of more than ~1.5 ms restarts the count. */
+            scan_line += 26;
+            pad_sequence("reset after 26 lines", port, 1);
+
+            /* Pause across the end of an NTSC frame: 262 - 250 + 5 = 17 lines,
+               too short to reset. Continuing gives a 3-button answer. */
+            gwenesis_vdp_status &= ~1;
+            scan_line = 250;
+            pad_sequence("NTSC frame end, before", port, 1);
+            frame_counter++; scan_line = 5;
+            pad_sequence("NTSC frame end, 17 lines", port, 0);
+            /* Same from line 250 to line 30 of the next frame: 42 lines, reset. */
+            scan_line = 250;
+            pad_sequence("NTSC frame end, before (2)", port, 1);
+            frame_counter++; scan_line = 30;
+            pad_sequence("NTSC frame end, 42 lines", port, 1);
+
+            /* PAL frames are 313 lines: stamp at line 250, next frame line 0
+               is 63 lines later and resets, where NTSC arithmetic would give
+               12 and not reset. */
+            gwenesis_vdp_status |= 1;
+            scan_line = 250;
+            pad_sequence("PAL frame end, before", port, 1);
+            frame_counter++; scan_line = 0;
+            pad_sequence("PAL frame end, 63 lines", port, 1);
+            gwenesis_vdp_status &= ~1;
+
+            /* The reset also applies to reads: stop on the ID read, wait,
+               and reading again without a write gives an ordinary TH-low
+               read instead of the ID. */
+            scan_line += 30;
+            pad_step("halfway", port, 1, RD_HIGH);
+            pad_step("halfway", port, 0, RD_LOW);
+            pad_step("halfway", port, 1, RD_HIGH);
+            pad_step("halfway", port, 0, RD_LOW);
+            pad_step("halfway", port, 1, RD_HIGH);
+            pad_step("halfway", port, 0, RD_ID);
+            scan_line += 30;
+            {
+                unsigned data = 0x03 + port * 2;
+                unsigned got = gwenesis_io_read_ctrl(data); /* TH still low */
+                unsigned want = expect_pad_bits(RD_LOW, pad_selftest_pressed);
+                if (got != want) {
+                    printf("padtest: read after pause: port %d read %02x, expected %02x\n",
+                           port + 1, got, want);
+                    pad_selftest_bad++;
+                }
+            }
+            /* Back to idle (TH high), then a full read-out after a pause. */
+            pad_step("halfway, TH back high", port, 1, RD_HIGH);
+            scan_line += 30;
+            pad_sequence("after halfway pause", port, 1);
+
+            gwenesis_io_set_six_button(port, 0);
+            scan_line += 30;
+        }
+    }
+
+    /* Reset must drop the pads back to 3 buttons. */
+    gwenesis_io_set_six_button(0, 1);
+    gwenesis_io_reset();
+    gwenesis_io_write_ctrl(0x09, 0x40);
+    pad_selftest_pressed = PB_A | PB_X;
+    scan_line += 30;
+    pad_sequence("after gwenesis_io_reset", 0, 0);
+
+    pad_selftest_active = 0;
+    printf("padtest: %s\n", pad_selftest_bad ? "FAILED" : "PASS");
+    return pad_selftest_bad;
+}
+
 /* ------------------------------ main ------------------------------- */
 
 int main(int argc, char **argv)
@@ -346,6 +532,13 @@ int main(int argc, char **argv)
     parse_press("GEN_PRESS_A", 6);
     parse_press("GEN_PRESS_C", 5);
     parse_press("GEN_PRESS_B", 4);
+    parse_press("GEN_PRESS_Z", 8);
+    parse_press("GEN_PRESS_Y", 9);
+    parse_press("GEN_PRESS_X", 10);
+    parse_press("GEN_PRESS_MODE", 11);
+
+    const char *pad_env = getenv("GEN_PAD");
+    int six_button = pad_env && atoi(pad_env) == 6;
 
     /* Optional warm-up launch: run a different game first and tear it
        down, so this run starts from whatever state the core left behind. */
@@ -364,6 +557,8 @@ int main(int argc, char **argv)
         load_cartridge(first, first_size);
         power_on();
         reset_emulation();
+        gwenesis_io_set_six_button(0, six_button);
+        gwenesis_io_set_six_button(1, six_button);
         gwsnd_init(0, 0);
         for (int f = 0; f < 300; f++) {
             current_frame_no = f;
@@ -424,6 +619,19 @@ int main(int argc, char **argv)
     load_cartridge(rom, rom_size);
     power_on();
     reset_emulation();
+    gwenesis_io_set_six_button(0, six_button);
+    gwenesis_io_set_six_button(1, six_button);
+    if (six_button)
+        printf("pads: 6 button\n");
+
+    if (getenv("GEN_PAD_SELFTEST")) {
+        int bad = pad_selftest();
+        wav_close(&wav_mixed);
+        wav_close(&wav_ym);
+        wav_close(&wav_psg);
+        free_emulator_mem();
+        return bad ? 1 : 0;
+    }
 
     const char *srm_path = getenv("GEN_SRM");
     if (srm_path && *srm_path)
