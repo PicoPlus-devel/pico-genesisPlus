@@ -1,6 +1,6 @@
 # CHANGELOG
 
-**v0.16** adds an **overscan fix** for the menus, for TVs that cut off the edges of the screen, and fits more options on one page of the settings menu.
+**v0.17** plays games larger than 4 MB, such as **Super Street Fighter II**, and on the Adafruit Fruit Jam and similar boards even games too large for PSRAM, such as *Demons of Asteborg*.
 
 
 # General Info
@@ -27,6 +27,17 @@ Only RP2350 (pico 2 based boards) supported. Works best with [Adafruit Fruit Jam
 > **Note:** This limitation does **not** apply to **HSTX-based boards** (e.g., *Adafruit Fruit Jam*), where the monitor refresh rate can be set to **60 Hz**.
 >
 > Games also **run slower** on PicoDVI boards. See [Performance](#performance) below.
+
+# v0.17 Release notes
+
+## What's new
+
+- **Games larger than 4 MB.** *Super Street Fighter II* now plays. It needs a board with PSRAM, or one whose flash has room for it. ([#21](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/21))
+- **Games too large for PSRAM.** On a board with HSTX video, PSRAM and 16 MB of flash, such as the Adafruit Fruit Jam or a Pimoroni Pico Plus 2, games of up to about 15 MB now run, for example *Demons of Asteborg*. The first time such a game is started, the console asks before it writes the game to flash, which takes about a minute, and then restarts into the game. After that it starts in a few seconds. See [Large games](https:///github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#large-games).
+
+## Fixes
+
+- Fixed memory corruption in games that show a window on the left side of the screen, such as the pause menu of *Demons of Asteborg*.
 
 # v0.16 Release notes
 

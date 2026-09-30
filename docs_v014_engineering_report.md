@@ -615,5 +615,6 @@ runs the display at 77.1 Hz.
 | How sound gets from a register write to a speaker | `port/gwsnd.h` then `gwsnd_core0.c` / `gwsnd_core1.c` |
 | Why the buffers are sized the way they are | `port/buffers.c`, §4 here |
 | Save RAM | `port/gwsram.h` header comment |
+| ROMs over 4 MB (bank switching; added after v0.14) | `port/gwmapper.h`, then `romflash.h` for ROMs too large for PSRAM |
 | Reproducing a bug without hardware | `hosttest/` and §11 here |
 | User-facing changes | `CHANGELOG.md` |

@@ -708,10 +708,17 @@ void GW_SRAM_FUNC(draw_line_aw)(int line) {
 
   unsigned int nt = base_w + row * wdwidth_x2 + Window_first / 4;
 
+  /* PORT: bug fix. The window starts at Window_first, not where plane A
+     stopped: the two only coincide for a window on the right. With the window
+     on the left (REG17 bit 7 clear) plane A runs to the right edge, and
+     upstream drew the window from there on -- up to HPOS*16 bytes past the end
+     of render_buffer, over whatever globals follow it (Demons of Asteborg's
+     gameplay screen, caught by ASan in hosttest). */
+  uint8_t *wpos = scr + Window_first;
   for (int i = Window_first / 8; i < Window_last / 8; ++i) {
-    draw_pattern_planeA(end, FETCH16VRAM(nt), paty);
+    draw_pattern_planeA(wpos, FETCH16VRAM(nt), paty);
     nt += 2;
-    end += 8;
+    wpos += 8;
   }
 }
 

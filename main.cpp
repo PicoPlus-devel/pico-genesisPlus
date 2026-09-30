@@ -16,6 +16,10 @@
 #include "FrensFonts.h"
 #include "vumeter.h"
 #include "menu_settings.h"
+#if HSTX
+#include "romflash.h"
+#include "progress_bar.h"
+#endif
 #if PICO_RP2350 && PSRAM_CS_PIN
 #include "PicoPlusPsram.h"
 #endif
@@ -35,6 +39,7 @@ extern "C"
 #include "gwsnd.h"
 #include "buffers.h"
 #include "gwsram.h"
+#include "gwmapper.h"
 }
 
 bool isFatalError = false;
@@ -1412,6 +1417,172 @@ static bool isValidGenesisRom(uintptr_t addr, size_t size, char *err, size_t err
     return false;
 }
 
+/* ------------------------------------------------------------------ */
+/* ROMs too large for PSRAM (romflash.h).                               */
+/* ------------------------------------------------------------------ */
+
+/* PSRAM part of a ROM split between flash and PSRAM, or null, and how much of
+   the ROM the flash part holds. */
+static uint8_t *romTail = nullptr;
+static size_t romHeadLen = 0;
+
+/* HSTX boards with PSRAM only. The flash write takes XIP away for hundreds of
+   milliseconds at a time; HSTX scan-out on core1 is SRAM resident and rides
+   that out, PicoDVI's (pico_lib/dvi) runs from flash and does not. */
+#if HSTX
+
+/* A ROM-to-flash write ends in a reboot: an erase holds interrupts off for
+   hundreds of milliseconds at a time, which a PIO USB host does not survive.
+   This marker in watchdog scratch[5] picks the cart straight back up after
+   it, so the user still only chose it once. [4] is clobbered by
+   watchdog_reboot, [6]/[7] are the bootloader handshake (FrensHelpers.cpp),
+   which also means a bootloader build resumes into this emulator. */
+static constexpr int GEN_RESUME_SCRATCH = 5;
+static constexpr uint32_t GEN_RESUME_MAGIC = 0x6E5F1A54u;
+
+/* Decimal conversion for the flash status line, without pulling printf into
+   a callback that runs between flash operations. */
+static int u32ToDec(char *out, uint32_t v)
+{
+    char tmp[10];
+    int n = 0;
+    do
+    {
+        tmp[n++] = (char)('0' + (v % 10));
+        v /= 10;
+    } while (v);
+    for (int i = 0; i < n; i++)
+        out[i] = tmp[n - 1 - i];
+    return n;
+}
+
+/* Progress bar during a ROM-to-flash write. Colours are RGB555 literals so
+   nothing is read from a palette in flash. The bar is built with
+   PROGRESS_BAR_IN_SRAM=0: romflash.cpp puts QMI M0 back to a working timing
+   inside every erase/program, so these calls always run against healthy
+   flash, and SRAM is better spent on the emulator. */
+#define PB_COL_BORDER 0x0000u /* black */
+#define PB_COL_EMPTY 0x7FFFu  /* white */
+#define PB_COL_FILL 0x03E0u   /* green */
+
+static void romflashProgress(int phase, uint32_t done, uint32_t total)
+{
+    /* Erase is the long pole, so give it most of the bar. */
+    uint32_t pct = total == 0 ? 0
+                   : (phase == ROMFLASH_ERASE)
+                       ? (uint32_t)((uint64_t)done * 60u / total)
+                       : 60u + (uint32_t)((uint64_t)done * 40u / total);
+
+    /* The write phase fires once per bounce buffer; redraw only on a move. */
+    static uint32_t last = 0xFFFFFFFFu;
+    if (pct == last && done != total)
+        return;
+    last = pct;
+
+    char st[32];
+    const char *what = (phase == ROMFLASH_ERASE) ? "Erasing " : "Writing ";
+    int n = 0;
+    while (what[n] && n < 12)
+    {
+        st[n] = what[n];
+        n++;
+    }
+    n += u32ToDec(st + n, done / 1024u);
+    st[n++] = '/';
+    n += u32ToDec(st + n, total / 1024u);
+    st[n++] = ' ';
+    st[n++] = 'K';
+    st[n++] = 'B';
+    st[n] = 0;
+    progress_bar_draw_status(st, PB_COL_EMPTY, PB_COL_BORDER);
+    progress_bar_draw(pct, 100, PB_COL_FILL, PB_COL_EMPTY, PB_COL_BORDER);
+}
+
+/* The menu hands back ROM_FILE_ADDR == 0 for a file too large to preload into
+   PSRAM. Run such a cart from the flash region instead, with whatever does not
+   fit there read into PSRAM. Writes the flash part first when the region does
+   not already hold this exact file, then reboots (see GEN_RESUME_SCRATCH).
+   Returns the image base, or 0 to go back to the menu -- with ErrorMessage set
+   unless the user simply declined the write. */
+static uintptr_t prepareOversizeRom(const char *path, size_t romSize, bool resumed)
+{
+    /* Anything the preload left there ("Cannot allocate ...") is not an error
+       here: running this cart from flash is the plan. */
+    ErrorMessage[0] = 0;
+
+    if (romflash_capacity() == 0)
+    {
+        snprintf(ErrorMessage, ERRORMESSAGESIZE, "ROM too large");
+        return 0;
+    }
+    size_t headLen = romflash_head_len(romSize);
+
+    /* On the launch we rebooted into, the record is proof of a write that was
+       verified moments ago: re-checking would only cost time, and under
+       ROMFLASH_FORCE_REWRITE it would rewrite and reboot forever. */
+    if (!resumed && !romflash_holds(path, romSize))
+    {
+        const char *shortName = Frens::GetfileNameFromFullPath((char *)path);
+        char sizeLine[40];
+        snprintf(sizeLine, sizeof(sizeLine), "%u KB - takes about a minute",
+                 (unsigned)(headLen / 1024));
+        if (!menuConfirmPrompt("This game is too big for RAM and",
+                               "must be written to flash first.", sizeLine))
+        {
+            printf("romflash: user declined the write\n");
+            return 0;
+        }
+        menuNoticeScreen("Writing to flash memory", shortName,
+                         "Do not power off.", "The console restarts when done.");
+        progress_bar_draw(0, 100, PB_COL_FILL, PB_COL_EMPTY, PB_COL_BORDER);
+        if (!romflash_program(path, romSize, romflashProgress))
+        {
+            snprintf(ErrorMessage, ERRORMESSAGESIZE, "Flash write failed");
+            return 0;
+        }
+        printf("romflash: rebooting to restore USB, then resuming\n");
+        watchdog_hw->scratch[GEN_RESUME_SCRATCH] = GEN_RESUME_MAGIC;
+        watchdog_reboot(0, 0, 0);
+        while (true)
+            tight_loop_contents();
+    }
+
+    const unsigned char *head = romflash_image();
+    if (headLen < romSize)
+    {
+        romTail = romflash_load_tail(path, romSize, headLen);
+        if (!romTail)
+        {
+            snprintf(ErrorMessage, ERRORMESSAGESIZE, "Not enough PSRAM for ROM");
+            return 0;
+        }
+        romHeadLen = headLen;
+    }
+    return (uintptr_t)head;
+}
+
+/* On a PSRAM board the rom browser lists only files that fit in free PSRAM.
+   With the flash region available, a ROM can be as large as the region's
+   whole banks plus a PSRAM tail (keeping the preload's 512 KB margin), so tell
+   the browser to list those too (maxOversizeRomSize, pico_shared). maxRomSize
+   only feeds the menu's status line on these boards; raise it to match. */
+static void raiseMaxRomSizeForFlash()
+{
+    if (!Frens::isPsramEnabled() || romflash_capacity() == 0)
+        return;
+    const size_t margin = 512 * 1024;
+    size_t avail = Frens::GetAvailableMemory();
+    size_t limit = romflash_head_len((size_t)-1) + (avail > margin ? avail - margin : 0);
+    if (limit < romflash_capacity())
+        limit = romflash_capacity();
+    printf("romflash: ROMs up to %u KB can run (flash region + %u KB PSRAM free)\n",
+           (unsigned)(limit / 1024), (unsigned)(avail / 1024));
+    maxOversizeRomSize = (int)limit;
+    if (limit > (size_t)maxRomSize)
+        maxRomSize = (int)limit;
+}
+#endif /* HSTX */
+
 /// @brief
 /// Start emulator.
 /// @return
@@ -1444,6 +1615,30 @@ int main()
     scaleMode8_7_ = Frens::applyScreenMode(settings.screenMode);
 #endif
     bool showSplash = true;
+#if HSTX
+    raiseMaxRomSizeForFlash();
+    bool resumedFromFlashWrite = false;
+    if (watchdog_hw->scratch[GEN_RESUME_SCRATCH] == GEN_RESUME_MAGIC)
+    {
+        watchdog_hw->scratch[GEN_RESUME_SCRATCH] = 0;
+        /* The path comes from the flash record, never from ROMINFOFILE: that
+           file is written by every Frens emulator, so it routinely names
+           another console's cart. */
+        const char *rec = romflash_recorded_path();
+        if (rec && rec[0])
+        {
+            strncpy(selectedRom, rec, sizeof(selectedRom) - 1);
+            selectedRom[sizeof(selectedRom) - 1] = 0;
+            resumedFromFlashWrite = true;
+            showSplash = false;
+            printf("romflash: resuming %s after the flash write\n", selectedRom);
+        }
+        else
+        {
+            printf("romflash: resume asked for, but the record is invalid\n");
+        }
+    }
+#endif
     g_settings_visibility = g_settings_visibility_md;
     g_available_screen_modes = g_available_screen_modes_md;
     gwsnd_set_fill_query(sinkFillPermille);
@@ -1465,22 +1660,45 @@ int main()
         audio_enabled = settings.flags.audioEnabled;
         size_t romSize = getSelectedRomSize(selectedRom);
 
+        /* Normally the menu has preloaded the ROM into PSRAM (or, without
+           PSRAM, flashed it). Zero with PSRAM present means it was too large
+           to preload: run it from the flash region. */
+        uintptr_t romAddr = ROM_FILE_ADDR;
+#if HSTX
+        if (!romAddr && Frens::isPsramEnabled() && strlen(selectedRom) > 0)
+        {
+            romAddr = prepareOversizeRom(selectedRom, romSize, resumedFromFlashWrite);
+            if (!romAddr)
+            {
+                resumedFromFlashWrite = false;
+                selectedRom[0] = 0;
+                showSplash = false;
+                continue;
+            }
+        }
+        resumedFromFlashWrite = false;
+#endif
+        /* Every game, split or not: the firmware never reboots between games,
+           and a previous game's split must not survive into this one. */
+        gwmapper_set_storage((const unsigned char *)romAddr,
+                             romTail ? romHeadLen : romSize, romTail);
+
         do
         {
             abSwapped = 0; // don't swap A and B buttons
             reset = resetGame = false;
             next_frame_time = 0; // Reset next frame time for FPS limiter
-            if (!isValidGenesisRom(ROM_FILE_ADDR, romSize, ErrorMessage, ERRORMESSAGESIZE))
+            if (!isValidGenesisRom(romAddr, romSize, ErrorMessage, ERRORMESSAGESIZE))
             {
                 printf("%s: %s\n", ErrorMessage, selectedRom);
                 reset = true;
                 break;
             }
             printf("Starting game (%d KB rom) rom@%p\n", (int)(romSize / 1024),
-                   (void *)ROM_FILE_ADDR);
+                   (void *)romAddr);
             /* Must precede init_emulator_mem(), which allocates the buffer
                this sizes. */
-            gwsram_detect((const unsigned char *)ROM_FILE_ADDR, romSize);
+            gwsram_detect((const unsigned char *)romAddr, romSize);
             if (!init_emulator_mem())
             {
                 snprintf(ErrorMessage, 40, "Out of memory starting game");
@@ -1488,7 +1706,7 @@ int main()
                 reset = true;
                 break;
             }
-            load_cartridge((const unsigned char *)ROM_FILE_ADDR, romSize);
+            load_cartridge((const unsigned char *)romAddr, romSize);
             power_on();
             reset_emulation();
             loadCartSram();
@@ -1516,6 +1734,14 @@ int main()
             Frens::f_free((void *)ROM_FILE_ADDR);
             ROM_FILE_ADDR = 0;
         }
+        /* The PSRAM half of a flash/PSRAM split, for the same reason. The
+           flash half is never freed. */
+#if HSTX
+        romflash_free_tail(romTail);
+#endif
+        romTail = nullptr;
+        romHeadLen = 0;
+        gwmapper_set_storage(nullptr, 0, nullptr);
         selectedRom[0] = 0;
         showSplash = false;
     }

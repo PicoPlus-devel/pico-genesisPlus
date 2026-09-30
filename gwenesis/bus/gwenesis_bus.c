@@ -121,6 +121,10 @@ void load_cartridge(const unsigned char *buffer, size_t size)
         rom_addr_mask <<= 1;
     rom_addr_mask -= 1;
 
+    /* Page table behind FETCH*ROM, back at its power-on banks. Must precede
+       set_region() below, which reads the header through it. */
+    gwmapper_reset(buffer, size, rom_addr_mask);
+
     /* TMSS latch survives from the previous game when relaunching without
        a reboot (PSRAM boards) — reset it here. */
     tmss_state = 0;
@@ -381,7 +385,7 @@ static inline unsigned int gwenesis_bus_map_z80_address(unsigned int address) {
 static inline unsigned int gwenesis_bus_map_io_address(unsigned int address)
 {
   /* /TIME region $A13000-$A130FF, which carries the save RAM control register
-     at $A130F1. Upstream's "address & 0x1000" test sent $A13xxx to the Z80
+     at $A130F1 and the ROM bank registers at $A130F3-$FF. Upstream's "address & 0x1000" test sent $A13xxx to the Z80
      control registers, where it matched neither BUSREQ nor RESET and did
      nothing but a z80_sync(); reads returned z80_read_ctrl()'s 0xFF default,
      which the TIME_CTRL read case reproduces. */

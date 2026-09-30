@@ -161,9 +161,20 @@
 	extern unsigned int rom_addr_mask;
 	extern unsigned char *M68K_RAM;
 
+#include "gwmapper.h"
+#if GENESIS_ROM_MAPPER
+	/* PORT: cartridge ROM goes through a table of 512 KB pages so carts
+	   larger than 4 MB can bank switch (port/gwmapper.h). For every other
+	   cart the table reproduces ROM_DATA[A & rom_addr_mask] exactly. */
+#define GW_ROM_AT(A) (&gw_rom.bank[((A) >> 19) & 0xF][(A) & gw_rom.page_mask])
+#define FETCH8ROM(A) (gw_rom.bank[((A) >> 19) & 0xF][((A) & gw_rom.page_mask) ^ 1])
+#define FETCH16ROM(A) ((*(const unsigned short *)GW_ROM_AT(A)))
+#define FETCH32ROM(A) ( (*(const unsigned int *)GW_ROM_AT(A) << 16) | (*(const unsigned int *)GW_ROM_AT(A) >> 16) )
+#else
 #define FETCH8ROM(A) ((ROM_DATA[(((A) & rom_addr_mask) ^ 1)]))
 #define FETCH16ROM(A) ((*(const unsigned short *)&ROM_DATA[((A) & rom_addr_mask)]))
 #define FETCH32ROM(A) ( (*(const unsigned int *)&ROM_DATA[((A) & rom_addr_mask)] << 16) | (*(const unsigned int *)&ROM_DATA[((A) & rom_addr_mask)] >> 16) )
+#endif
 
 #else
 #if GNW_TARGET_MARIO != 0 | GNW_TARGET_ZELDA != 0

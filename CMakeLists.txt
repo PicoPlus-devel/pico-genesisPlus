@@ -63,6 +63,23 @@ if(ENABLE_PIO_USB EQUAL 1)
     check_and_add_pico_pio_usb_support()
 endif()
 message("PIO USB support: ${ENABLE_PIO_USB}, using PIO: ${PIO_USB_USE_PIO}")
+
+# ROMs too large for PSRAM run from a region in the top 8 MB of a 16 MB flash,
+# with any excess read into PSRAM (romflash.cpp, HSTX builds only -- see the
+# HSTX block below). The progress bar shown while
+# such a ROM is written only ever draws between flash operations, after
+# romflash.cpp has put QMI M0 back, so it need not be SRAM resident -- and
+# SRAM is what this emulator is short of. Saves ~1.7 KB. Directory scoped so
+# it reaches the pico_shared build.
+add_definitions(-DPROGRESS_BAR_IN_SRAM=0)
+# Testing aid: pretend the flash region never already holds the ROM, so every
+# launch of an oversized ROM rewrites it (about a minute). Never ship this on.
+option(ROMFLASH_FORCE_REWRITE "Always rewrite a flash-resident ROM (progress-bar testing)" OFF)
+if(ROMFLASH_FORCE_REWRITE)
+    add_definitions(-DROMFLASH_FORCE_REWRITE=1)
+    message(WARNING "ROMFLASH_FORCE_REWRITE=1 - every oversized ROM launch rewrites flash. Testing only.")
+endif()
+
 add_executable(${projectname}
     main.cpp
     splash.cpp
@@ -74,6 +91,7 @@ add_executable(${projectname}
     port/gwsnd_shadow.c
     port/savestate_stubs.c
     port/gwsram.c
+    port/gwmapper.c
 )
 
 pico_set_program_name(${projectname} "${projectname}")
@@ -104,12 +122,21 @@ if (NOT DEFINED GENESIS_CART_SRAM)
 endif()
 message("Cartridge save RAM: ${GENESIS_CART_SRAM}")
 
+# Cartridge ROM bank switching (carts over 4 MB, e.g. Super Street Fighter II;
+# port/gwmapper.h). On by default. -DGENESIS_ROM_MAPPER=0 restores the old
+# single-pointer ROM fetch for a frame-rate A/B; such carts do not work then.
+if (NOT DEFINED GENESIS_ROM_MAPPER)
+    set(GENESIS_ROM_MAPPER 1 CACHE STRING "Emulate ROM bank switching (1) or compile it out for perf A/B (0)")
+endif()
+message("ROM bank switching: ${GENESIS_ROM_MAPPER}")
+
 target_compile_definitions(${projectname} PRIVATE
     PICO_RP2040_USB_DEVICE_ENUMERATION_FIX=1
 )
 
 target_compile_definitions(${projectname} PUBLIC
     GENESIS_CART_SRAM=${GENESIS_CART_SRAM}
+    GENESIS_ROM_MAPPER=${GENESIS_ROM_MAPPER}
 )
 
 target_compile_options(${projectname} PRIVATE
@@ -228,6 +255,9 @@ if(GPIOHSTXD0 AND GPIOHSTXD1 AND GPIOHSTXD2 AND GPIOHSTXCK)
     # threshold only, so it costs no memory.
     target_compile_definitions(${projectname} PUBLIC HSTX_AUDIO_DI_HIGH_WATERMARK=240)
     target_sources(${projectname} PRIVATE port/gwsnd_core1.c)
+    # ROMs too large for PSRAM, run from flash (+ PSRAM). HSTX only: the flash
+    # write takes XIP away, which HSTX scan-out survives and PicoDVI does not.
+    target_sources(${projectname} PRIVATE romflash.cpp)
 else()
     target_compile_definitions(${projectname} PUBLIC GWENESIS_PIXEL_FMT=444)
 endif()

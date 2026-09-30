@@ -25,7 +25,7 @@ CORE_SRCS="gwenesis/bus/gwenesis_bus.c gwenesis/cpus/M68K/m68kcpu.c \
  gwenesis/vdp/gwenesis_vdp_mem.c gwenesis/vdp/gwenesis_vdp_gfx.c"
 
 PORT_SRCS="port/buffers.c port/gwsnd_core0.c port/gwsnd_resample.c \
- port/gwsnd_shadow.c port/savestate_stubs.c port/gwsram.c"
+ port/gwsnd_shadow.c port/savestate_stubs.c port/gwsram.c port/gwmapper.c"
 
 build_lutgen() {
     echo "== building hosttest/lutgen"
@@ -48,8 +48,9 @@ all)
         ./hosttest/lutgen gwenesis/sound/luts
     fi
     echo "== building hosttest/gen_host"
+    # EXTRA_CFLAGS: A/B switches, e.g. EXTRA_CFLAGS=-DGENESIS_ROM_MAPPER=0
     gcc -O1 -g -fsanitize=address -fno-omit-frame-pointer \
-        $CORE_DEFS $INCS \
+        $CORE_DEFS ${EXTRA_CFLAGS:-} $INCS \
         $CORE_SRCS $PORT_SRCS hosttest/host_main.c \
         -o hosttest/gen_host -lm
     echo "ok: hosttest/gen_host"

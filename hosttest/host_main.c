@@ -22,8 +22,17 @@ Its output must be byte-identical to launching <rom2> on its own.
 
 Input injection (frame ranges, inclusive):
     GEN_PRESS_START="120:180"   hold START on pad 0
+                                (several ranges: "120:125,300:305")
     GEN_PRESS_A="200:220"       hold A on pad 0
     GEN_PRESS_B / GEN_PRESS_C   likewise
+
+Split ROM storage (the firmware keeps a ROM too big for PSRAM as a head in
+flash plus a tail in PSRAM, see romflash.cpp):
+    GEN_SPLIT_BANKS=<n>         copy the first n 512 KB banks and the rest
+                                into two separate allocations. The head is
+                                exactly n banks, so ASan stops any fetch
+                                that runs off its end. Output must be
+                                byte-identical to the contiguous run.
 
 Cartridge save RAM:
     GEN_SRM=<file>              load it before the run and write it after,
@@ -54,6 +63,7 @@ Convert PPMs: python3 hosttest/ppm2png.py <outdir>
 #include "gwsnd.h"
 #include "buffers.h"
 #include "gwsram.h"
+#include "gwmapper.h"
 #include "wav.h"
 
 #include "frame_loop.inc"
@@ -73,21 +83,25 @@ typedef struct {
     int from, to, bit;
 } press_range;
 
-static press_range presses[8];
+static press_range presses[32];
 static int press_count;
 static int current_frame_no;
 
+/* "from:to", or several separated by commas: "120:125,300:305". */
 static void parse_press(const char *env, int bit)
 {
     const char *v = getenv(env);
-    if (!v || press_count >= 8)
-        return;
-    int from = 0, to = 0;
-    if (sscanf(v, "%d:%d", &from, &to) == 2) {
+    while (v && *v && press_count < (int)(sizeof presses / sizeof presses[0])) {
+        int from = 0, to = 0;
+        if (sscanf(v, "%d:%d", &from, &to) != 2)
+            break;
         presses[press_count].from = from;
         presses[press_count].to = to;
         presses[press_count].bit = bit;
         press_count++;
+        v = strchr(v, ',');
+        if (v)
+            v++;
     }
 }
 
@@ -371,6 +385,28 @@ int main(int argc, char **argv)
     if (!rom)
         return 1;
 
+    const char *split = getenv("GEN_SPLIT_BANKS");
+    if (split && atoi(split) > 0) {
+        size_t head_len = (size_t)atoi(split) * GWMAPPER_BANK_SIZE;
+        if (head_len >= rom_size) {
+            fprintf(stderr, "GEN_SPLIT_BANKS: %s banks is the whole rom\n", split);
+            return 1;
+        }
+        /* The tail keeps the contiguous buffer's pow2 + 4 padding, so reads the
+           mirror table sends past the image land in the same zeros as before;
+           the head gets none. */
+        size_t pot = 1;
+        while (pot < rom_size)
+            pot <<= 1;
+        unsigned char *head = malloc(head_len);
+        unsigned char *tail = calloc(1, pot - head_len + 4);
+        memcpy(head, rom, head_len);
+        memcpy(tail, rom + head_len, rom_size - head_len);
+        free((void *)rom);
+        gwmapper_set_storage(head, head_len, tail);
+        rom = head;
+    }
+
     gwsram_detect(rom, rom_size);
     if (!init_emulator_mem()) {
         fprintf(stderr, "out of memory\n");
@@ -421,6 +457,8 @@ int main(int argc, char **argv)
     gwsnd_shutdown();
     free_emulator_mem();
 
+    if (gwmapper_active())
+        printf("mapper: %u bank writes\n", gwmapper_bank_writes);
     printf("ran %d frames, audio: %s/mixed.wav ym.wav psg.wav\n",
            total_frames, outdir);
     return 0;

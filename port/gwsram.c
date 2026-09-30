@@ -15,6 +15,7 @@ for the many carts that declare a nonsensical range.
 
 #include "gwenesis_port.h"
 #include "gwsram.h"
+#include "gwmapper.h"
 
 /* Cartridge save RAM can only live in the $200000-$3FFFFF half of the cart
    window; anything else in the header is a broken image, not a mapping. */
@@ -350,10 +351,13 @@ void gwsram_import(uint32_t offset, const uint8_t *flat, uint32_t n)
 
 void GW_SRAM_FUNC(gwsram_time_write)(unsigned int address, unsigned int value)
 {
-    /* Only the save RAM control register. $A130F3-$FF are the SSF2 bank
-       registers, which this port does not implement. */
-    if ((address & 0xFFu) != 0xF1u)
+    /* $A130F1 is the save RAM control register. Everything else in the /TIME
+       region goes to the ROM mapper, which owns $A130F3-$FF (the bank
+       registers of carts over 4 MB) and ignores the rest. */
+    if ((address & 0xFFu) != 0xF1u) {
+        gwmapper_bank_write(address, value);
         return;
+    }
 
     /* Only carts whose ROM overlaps the save window are wired to this
        register; Genesis Plus GX does not even install a handler for the

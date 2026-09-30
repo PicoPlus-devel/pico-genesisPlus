@@ -93,7 +93,16 @@ altogether.
 
 It is detected at boot, so no separate binary is needed. You have it on the Fruit Jam and the Metro RP2350, on a Murmulator with a PSRAM chip fitted, and on a [Pimoroni Pico Plus 2](https://shop.pimoroni.com/products/pimoroni-pico-plus-2?variant=42092668289107) in any build that takes a Pico-shaped board — the breadboard/[PicoNES PCB](#picones-pcb) build (`-c2`), the Pimoroni Pico DV Demo Base (`-c1`) and the Spotpear board (`-c10`).
 
-Roms that are too large for the memory the board has are left out of the list in the menu.
+Roms that are too large for the memory the board has are left out of the list in the menu. Games larger than 8 MB are covered under [Large games](#large-games).
+
+### Large games
+
+Most games are 4 MB or smaller. A few are larger and switch between parts of the cartridge while they run. *Super Street Fighter II* (5 MB) is the only original cartridge of that kind; some newer homebrew games are considerably larger, such as *Demons of Asteborg* (15 MB).
+
+- **Up to 8 MB**, such a game plays like any other on a board with PSRAM, or on a board without PSRAM whose flash has room for it.
+- **Larger than 8 MB**, the game does not fit in PSRAM. On a board with HSTX video, PSRAM and 16 MB of flash, such as the Adafruit Fruit Jam or a Pimoroni Pico Plus 2 in the `-c2` build, it runs from flash instead, with the part that does not fit there held in PSRAM. The limit is about 15 MB. Boards that use the PicoDVI driver do not support this.
+
+The first time such a game is started, the console asks before it writes the game to flash. Writing takes about a minute, a progress bar shows how far it is, and the console restarts and starts the game when it is done. Do not switch the board off while it is writing. After that the game starts in a few seconds, until another game of that size is started and takes its place. [pico-snesPlus](https:///github.com/PicoPlus-devel/pico-snesPlus) uses the same part of the flash for its largest games, so starting one of those replaces it as well.
 
 ### Other build configurations
 
@@ -368,7 +377,7 @@ Download the metadata pack from the [releases page](https:///github.com/PicoPlus
 ## Known limitations
 
 - **No saves on cartridges with a serial EEPROM**, such as *Wonder Boy in Monster World*, *NBA Jam*, *Micro Machines 2* and *Mega Man: The Wily Wars*. Ordinary battery-backed cartridges do save, see [Saved games](#saved-games). ([#20](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/20))
-- **Roms larger than 4 MB do not work.** They need bank switching that is not emulated, so a game such as *Super Street Fighter II* breaks as soon as it reaches past the first 4 MB. On a board with PSRAM such a rom is large enough to fit in memory and will start, so this is one to avoid rather than one the menu keeps out of your way. ([#21](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/21))
+- **Roms larger than 8 MB** need a board with HSTX video, PSRAM and 16 MB of flash, and roms larger than about 15 MB do not run at all. See [Large games](#large-games).
 - **Region follows the rom header.** A Europe-only rom runs at 50 Hz, everything else at 60 Hz. Multi-region roms (marked `JUE`) run at 60 Hz, as they would on an American console — there is no setting to force 50 Hz. ([#24](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/24))
 - **Sound is mono.** Both sound chips are mixed into one channel that goes to the left and the right speaker alike, so a game that puts a sound on one side — the stereo effects in *Sonic* or *Streets of Rage* — plays it in the middle instead. ([#22](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/22))
 - **No interlace mode.** The parts of a game that use it show a blank screen — the two-player mode of *Sonic the Hedgehog 2*, for example. ([#23](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/23))
@@ -413,6 +422,10 @@ cmake --build build -j$(nproc)                  # build without save RAM
 `GENESIS_CART_SRAM=0` removes the test from the read paths and the bus mapper
 entirely; saves do not work in such a build, so it is a measurement tool, not a
 configuration. Set it back to 1 (or re-run `./bld.sh`) afterwards.
+
+`GENESIS_ROM_MAPPER=0` does the same for the cartridge bank switching that games
+larger than 4 MB need (`port/gwmapper.h`): it restores the previous, direct rom
+fetch, and such games do not work in that build.
 
 ### PC test harness
 

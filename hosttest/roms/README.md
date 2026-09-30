@@ -14,6 +14,12 @@ regression matrix assumes:
 | `xeno_crisis.md`       | Xeno Crisis | SGDK / XGM driver (issue #11 repro) |
 | `tf4.md`               | Thunder Force IV / Lightening Force | worst-case load; by far the heaviest YM2612 status poller |
 | any EUR ROM            | — | PAL timing (313 lines, 50 Hz) |
+| `ssf2.md`              | Super Street Fighter II (5 MB) | ROM bank switching (`port/gwmapper.h`); without it: red screen, no sound |
+| `doa.bin`              | Demons of Asteborg (15 MB) | bank switching over 30 banks, SGDK save RAM banked via `$A130F1`, a left-side window plane; run it again with `GEN_SPLIT_BANKS=15` (the firmware's flash/PSRAM split) and compare |
+
+SSF2 needs button presses to get past the title into a fight, e.g.
+`GEN_PRESS_START="2450:2456,2560:2566,2680:2686,2800:2806,2920:2926,3040:3046"`
+over 6000 frames.
 
 Check a ROM before trusting its filename: the game name is at file offset
 `$120` and the save-RAM declaration at `$1B0` (`RA` when the cart has save

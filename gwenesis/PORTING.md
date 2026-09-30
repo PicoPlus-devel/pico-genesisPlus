@@ -53,7 +53,10 @@ and the sound-seam prototypes (`gwsnd_ym_write` / `gwsnd_ym_read` /
   heap for the menu).
 - New `load_cartridge(const unsigned char *, size_t)` variant: no memcpy,
   no ROM_SWAP (pico_shared pre-byte-swaps), sets pointer+mask, resets the
-  TMSS latch (survives relaunch-without-reboot on PSRAM boards).
+  TMSS latch (survives relaunch-without-reboot on PSRAM boards). Once the
+  mask is known it calls `gwmapper_reset()` (`port/gwmapper.c`), which puts
+  the ROM page table behind `FETCH*ROM` back to its power-on banks — before
+  `set_region()`, which reads the header through it.
 - `power_on()`: `memset(&m68k, 0, sizeof m68k)` before `m68k_init()` —
   stale context crashed relaunches (fix carried over from the old port).
 - The 6 sound-chip call sites route through the `gwsnd_*` seam with their
@@ -79,7 +82,9 @@ and the sound-seam prototypes (`gwsnd_ym_write` / `gwsnd_ym_read` /
     nothing beyond a `z80_sync()`; reads got `z80_read_ctrl()`'s `0xFF`
     default, which the `TIME_CTRL` read case returns unchanged.
   - `SRAM_ADDR` / `TIME_CTRL` cases in `gwenesis_bus_read_memory_8/16` and
-    `gwenesis_bus_write_memory_8/16`.
+    `gwenesis_bus_write_memory_8/16`. A `TIME_CTRL` write other than
+    `$A130F1` goes on to the ROM mapper (`gwmapper_bank_write()`), which owns
+    the bank registers `$A130F3-$FF`.
 
 ### `bus/gwenesis_bus.h`
 - `GWENESIS_AUDIO_BUFFER_LENGTH_PAL` 1056 → **1072**: a PAL frame
@@ -98,6 +103,20 @@ and the sound-seam prototypes (`gwsnd_ym_write` / `gwsnd_ym_read` /
 ### `cpus/M68K/m68k.h`
 - `GWENESIS_PICO` branch: `ROM_DATA` as const pointer + masked
   `FETCH8/16/32ROM` macros.
+- ROM bank switching for carts larger than 4 MB (Super Street Fighter II and
+  Everdrive-"SSF" homebrew): `FETCH8/16/32ROM` index a table of sixteen 512 KB
+  pages, `gw_rom` in `port/gwmapper.h`, instead of the single pointer. Every
+  cartridge-ROM read in the core goes through these three macros — 68000
+  instruction fetch, `m68ki_read_*`, PC-relative reads, the bus (and with it
+  the Z80 bank window) and VDP DMA — so none of those needed touching. For a
+  cart without the mapper the table reproduces `ROM_DATA[A & rom_addr_mask]`
+  exactly: every existing test ROM renders and sounds byte-identical. Table
+  and mask share a struct, so a fetch site needs one base address where it
+  used to need two; this made the opcode handlers 24 KB smaller. Built with
+  `-DGENESIS_ROM_MAPPER=0` the old macros return, for a frame-rate A/B.
+  The page table is also what lets a ROM too large for PSRAM live half in
+  flash, half in PSRAM (`romflash.cpp`): a bank never straddles the two.
+  This file is CRLF, like `m68kcpu.{c,h}`.
 - `cpu_memory_map memory_map[256]` (5 KB) compiled out of
   `m68ki_cpu_core` — every reader is inside `#if 0` in m68kcpu.h.
 
@@ -228,6 +247,13 @@ and the sound-seam prototypes (`gwsnd_ym_write` / `gwsnd_ym_read` /
   keep their low red bit.
 - `buffer_line_H32`/`scaled_buffer_line` made `static` (1.1 KB of stack
   per H32 scanline vs the 3 KB core0 stack).
+- **Bug fix**: `draw_line_aw()` drew the window plane starting where plane A
+  stopped, which is only where the window starts when it sits on the right.
+  With the window on the left (`REG17` bit 7 clear) plane A runs to the right
+  edge, so the window was drawn from there on — up to `HPOS*16` bytes past
+  the end of `render_buffer`, over the globals that follow it. It now starts
+  at `Window_first`. Found by ASan on Demons of Asteborg's pause screen; none
+  of the other test ROMs use a left window, and their output is unchanged.
 - `GW_SRAM_FUNC` on `gwenesis_vdp_render_line`, `draw_line_b`,
   `draw_line_aw`, `draw_sprites`, `draw_sprites_over_planes`,
   `blit_4to5_line`.
@@ -236,8 +262,11 @@ and the sound-seam prototypes (`gwsnd_ym_write` / `gwsnd_ym_read` /
 
 - Interlace mode unimplemented (`gwenesis_vdp_render_line` returns —
   Sonic 2 two-player is blank).
-- No SSF2 mapper: the bank registers at `$A130F3-$A130FF` are ignored, so
-  ROMs larger than 4 MB are unsupported.
+- ROM bank switching (`port/gwmapper.h`) switches 512 KB pages, so a 32-bit
+  read of the last word of a remapped page takes its low half from whatever
+  follows that bank in memory rather than from the next page. Splitting
+  `FETCH32ROM` into two lookups would slow every game; no known code reads
+  across a bank boundary.
 - No serial EEPROM (Wonder Boy in Monster World, NBA Jam, Micro Machines
   2, Mega Man: The Wily Wars). Those carts declare a two-byte range in the
   same header field save RAM uses; `gwsram_detect()` recognises them and
@@ -254,7 +283,8 @@ and the sound-seam prototypes (`gwsnd_ym_write` / `gwsnd_ym_read` /
 - VDP DMA reads cartridge space through `FETCH16ROM()`
   (`gwenesis_vdp_dma_m68k`), bypassing the bus, so a DMA sourced from save
   RAM would transfer ROM. No known game does this — save RAM is byte-wide
-  and slow, which is exactly what DMA is not for.
+  and slow, which is exactly what DMA is not for. (DMA from a switched ROM
+  bank is right: the page table sits under `FETCH16ROM()` itself.)
 - VDP DMA is instantaneous; FIFO not emulated.
 - YM2612 busy flag (status bit 7) not emulated; stereo panning compiled
   out (mono mix).
