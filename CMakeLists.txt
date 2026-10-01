@@ -298,10 +298,10 @@ if(GPIOHSTXD0 AND GPIOHSTXD1 AND GPIOHSTXD2 AND GPIOHSTXCK)
         set_source_files_properties(gwenesis/cpus/M68K/s68kcpu.c
             PROPERTIES COMPILE_OPTIONS "-O2")
         # CHD disc images through libchdr (submodule external/libchdr, as in
-        # pico-pcePlus; external/libchdr_pico.cmake). -DGENESIS_SEGACD_CHD=0
-        # leaves them out (cue/bin only).
+        # pico-pcePlus; external/libchdr_pico.cmake). Off by default (cue/bin
+        # only); -DGENESIS_SEGACD_CHD=1 adds them.
         if (NOT DEFINED GENESIS_SEGACD_CHD)
-            set(GENESIS_SEGACD_CHD 1 CACHE STRING "CHD disc images for Sega CD / MD+")
+            set(GENESIS_SEGACD_CHD 0 CACHE STRING "CHD disc images for Sega CD / MD+")
         endif()
         if (GENESIS_SEGACD_CHD)
             include(${CMAKE_CURRENT_SOURCE_DIR}/external/libchdr_pico.cmake)

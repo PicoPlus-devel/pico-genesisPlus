@@ -1,6 +1,6 @@
 # Pico-genesisPlus
 
-A Sega Genesis/Mega Drive and Sega CD/Mega-CD emulator for the Raspberry Pi Pico 2 (RP2350). It plays games from an SD card and puts the picture on your TV or monitor over HDMI. Connect a game controller, pick a game from the menu and play.
+A Sega Genesis/Mega Drive emulator for the Raspberry Pi Pico 2 (RP2350). It plays games from an SD card and puts the picture on your TV or monitor over HDMI. Connect a game controller, pick a game from the menu and play.
 
 Based on [Gwenesis](https://github.com/bzhxx/gwenesis) by bzhxx, with the Sega CD hardware from [PicoDrive](https://github.com/irixxxx/picodrive).
 
@@ -9,7 +9,7 @@ Based on [Gwenesis](https://github.com/bzhxx/gwenesis) by bzhxx, with the Sega C
 **Games**
 - Genesis/Mega Drive cartridge roms (`.md`, `.bin`) from every region. The region, and with it 50 or 60 Hz, follows the rom header.
 - Roms larger than 4 MB that switch banks, such as *Super Street Fighter II*, and on boards with HSTX video, PSRAM and 16 MB of flash roms of up to about 15 MB, such as *Demons of Asteborg*. See [Large games](#large-games).
-- Sega CD/Mega-CD discs as `.cue`/`.bin` or `.chd`, with CD audio, the PCM sound chip and the graphics chip, on boards with HSTX video and PSRAM. A Sega CD BIOS is needed. Games on several discs can change discs from the settings menu. See [Sega CD and MD+](#sega-cd-and-md) and [Games on several discs](#games-on-several-discs).
+- Sega CD/Mega-CD discs as `.cue`/`.bin`, on boards with HSTX video and PSRAM. A Sega CD BIOS is needed. Some games run, others still have bugs and graphical artifacts. Most are too slow to be playable. See [Sega CD and MD+](#sega-cd-and-md).
 - MD+ games, cartridge games patched to play CD audio, and cartridge games that use an attached Sega CD, such as *Pier Solar* with its *Enhanced Soundtrack Disc*. See [MD+ games](#md-games) and [Cartridge games with a Sega CD disc](#cartridge-games-with-a-sega-cd-disc).
 - Battery-backed cartridge saves, *Pier Solar*'s EEPROM and the Sega CD's backup memory, kept on the SD card in the file layouts PC emulators use. See [Saved games](#saved-games).
 
@@ -371,7 +371,7 @@ the board restarts to apply it. It is not offered on the other boards.
 > [!WARNING]
 > **The 504 MHz option is not advised. Leave it off.**
 >
-> - **It has not been tested with this emulator.** Cartridge games already run at full speed at 378 MHz. Whether it helps the Sega CD scenes that drop frames at 378 MHz has not been measured.
+> - **It has not been tested with this emulator.** Cartridge games already run at full speed at 378 MHz. Whether it makes Sega CD games run faster has not been measured.
 > - **It raises the core voltage and makes the chip run considerably hotter.** Sustained operation at that clock and voltage can overheat, destabilise or permanently damage the RP2350 and the board it is on, and shorten its lifetime.
 > - **It can cause instability and crashes**, which is why it is off by default.
 >
@@ -451,17 +451,20 @@ Sega CD games save to the console's own backup memory instead, see [Sega CD and 
 
 On a board with HSTX video and PSRAM — the Adafruit Fruit Jam, the Adafruit Metro RP2350 with PSRAM, a Pimoroni Pico Plus 2 in the `-c2` build — the emulator also plays Sega CD (Mega-CD) discs and MD+ games. The disc is read from the SD card while the game runs; everything the Sega CD adds to the console is held in PSRAM. Boards without PSRAM, and builds that use the PicoDVI driver, do not list disc images.
 
+> [!NOTE]
+> Some Sega CD games run, others still have bugs and graphical artifacts. Most are too slow to be playable. MD+ games run well.
+
 ### Disc images
 
 - **`.cue` with `.bin`**, as one file for the whole disc or one file per track (the Redump layout). A `.cue` may also refer to `.iso` data tracks and `.wav` audio tracks.
-- **`.chd`**, as created by MAME's `chdman createcd`. A CHD takes about half the space of the `.bin` files it was made from.
-- Audio tracks in MP3 or OGG format are not supported; convert them to WAV, or convert the whole disc to CHD.
+- `.chd` images are not supported.
+- Audio tracks in MP3 or OGG format are not supported; convert them to WAV.
 
-Keep each game in a folder of its own; the discs of a game on several discs go in the same folder. In a folder that holds a `.cue` or `.chd` file, the menu lists only the disc images and hides the track files, a BIOS file and an MD+ rom next to them. Select the `.cue` or `.chd` file to start the game.
+Keep each game in a folder of its own; the discs of a game on several discs go in the same folder. In a folder that holds a `.cue` file, the menu lists only the disc images and hides the track files, a BIOS file and an MD+ rom next to them. Select the `.cue` file to start the game.
 
 ### Games on several discs
 
-Some games come on more than one disc. Keep all discs of such a game in one folder, and either name them the way Redump does, with `(Disc 1)`, `(Disc 2)` and so on in the file name, for example `Night Trap (USA) (Disc 1).cue` and `Night Trap (USA) (Disc 2).cue`, or list them in an `.m3u` playlist: a text file with one disc image per line, in disc order, relative to the playlist's folder. Start the game from disc 1, or from the playlist. The discs must all be `.cue` files or all be `.chd` files, unless a playlist lists them.
+Some games come on more than one disc. Keep all discs of such a game in one folder, and either name them the way Redump does, with `(Disc 1)`, `(Disc 2)` and so on in the file name, for example `Night Trap (USA) (Disc 1).cue` and `Night Trap (USA) (Disc 2).cue`, or list them in an `.m3u` playlist: a text file with one disc image per line, in disc order, relative to the playlist's folder. Start the game from disc 1, or from the playlist.
 
 When the game asks for another disc, open the settings menu with SELECT + START. While a game on several discs runs, the first entry of the menu is **Change disc**: choose the disc with LEFT and RIGHT and press Button2. The menu closes, the Sega CD reports its lid open for about a second, as when a disc is swapped on the console, and then finds the new disc. Choosing **Reset** in the same entry resets the game instead.
 
@@ -479,7 +482,7 @@ The Sega CD's internal backup memory holds the saved games of all Sega CD games 
 
 ### MD+ games
 
-MD+ games are cartridge games patched to play CD-quality music through the interface of the MegaSD flash cartridge. They do not need a Sega CD BIOS. Put the patched rom and its disc image in the same folder, and select the disc image. The rom that goes with the disc is the one with the same name, for example `Streets of Rage 2 MD+.md` next to `Streets of Rage 2 MD+.cue`; failing that, the only Mega Drive rom in the folder. A rom too large to share PSRAM with the disc is written to flash first, as described in [Large games](#large-games). The `REM LOOP` and `REM NOLOOP` lines that some MD+ `.cue` files use to set where a track loops are supported in `.cue` files; a `.chd` file cannot carry them.
+MD+ games are cartridge games patched to play CD-quality music through the interface of the MegaSD flash cartridge. They do not need a Sega CD BIOS. Put the patched rom and its disc image in the same folder, and select the disc image. The rom that goes with the disc is the one with the same name, for example `Streets of Rage 2 MD+.md` next to `Streets of Rage 2 MD+.cue`; failing that, the only Mega Drive rom in the folder. A rom too large to share PSRAM with the disc is written to flash first, as described in [Large games](#large-games). The `REM LOOP` and `REM NOLOOP` lines that some MD+ `.cue` files use to set where a track loops are supported.
 
 ### Cartridge games with a Sega CD disc
 
@@ -503,7 +506,7 @@ Download the metadata pack from the [releases page](https:///github.com/PicoPlus
 - **77.1 Hz on non-HSTX boards**, which not every monitor accepts. See the [warning above](#supported-boards) and [#4](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/4).
 - **Games run slower on PicoDVI boards.** Boards without HSTX cannot keep up with full speed, see [Speed on PicoDVI boards](#speed-on-picodvi-boards).
 - **Mega Drive roms and Sega CD discs only.** Files that are neither are refused with a message instead of starting the emulator on whatever the file happens to contain.
-- **Sega CD limitations.** Disc images need a board with HSTX video and PSRAM. There is no support for the backup RAM cartridge or for CD+G. Changing discs has been tested by swapping discs in the BIOS menu and during *Sonic CD*, not yet with a game on several discs. Scenes in which both the console's and the Sega CD's processor are fully busy, such as loading and the special stages of *Sonic CD*, may drop frames; [frame skip](#frame-skip) helps there. So far only *Sonic CD*, *Pier Solar* with its *Enhanced Soundtrack Disc* and the MD+ version of *Moonwalker* have been tested; MSU-MD games, which also combine a cartridge with a Sega CD disc, have not.
+- **Sega CD games run too slow.** Some games run, others still have bugs and graphical artifacts. Most are too slow to be playable. MD+ games are not affected. Disc images need a board with HSTX video and PSRAM, and only `.cue`/`.bin` images are supported, not `.chd`. There is no support for the backup RAM cartridge or for CD+G.
 - **A NES pad clone on the GPIO port may get a different button layout.** The port tells NES and SNES pads apart by the shift register outputs a NES pad does not use, which an original Nintendo pad grounds. A clone that leaves them floating is taken for a SNES pad: all three Genesis buttons still work, but B is Genesis A, A is Genesis B and SELECT is Genesis C. See [NES and SNES pads on the GPIO port](#nes-and-snes-pads-on-the-gpio-port). ([#28](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/28))
 
 ## For developers
@@ -599,7 +602,7 @@ Gwenesis is itself built out of other people's work:
 - The Sega CD's second 68000 is a second instance of the Musashi core above, the way Genesis Plus GX runs it.
 - The disc image code (`.cue` parsing and CHD reading) and the BIOS lookup follow [pico-pcePlus](https://github.com/PicoPlus-devel/pico-pcePlus).
 - The *Pier Solar* cartridge hardware (bank switching and copy protection) follows PicoDrive; its SPI EEPROM is **Eke-Eke**'s from Genesis Plus GX, by way of PicoDrive.
-- CHD images: [libchdr](https://github.com/rtissera/libchdr) by **Romain Tisserand** and contributors, with the LZMA SDK by **Igor Pavlov**, [miniz](https://github.com/richgel999/miniz) and [zstd](https://github.com/facebook/zstd).
+- CHD images (not in the release builds): [libchdr](https://github.com/rtissera/libchdr) by **Romain Tisserand** and contributors, with the LZMA SDK by **Igor Pavlov**, [miniz](https://github.com/richgel999/miniz) and [zstd](https://github.com/facebook/zstd).
 
 ### Drivers and libraries
 
