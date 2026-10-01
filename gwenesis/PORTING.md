@@ -14,7 +14,8 @@ Files NOT copied from upstream: `cpus/Z80/Debug.c`, `cpus/Z80/ConDebug.c`
 (stray object file).
 
 New files (not upstream): `gwenesis_port.h`, `sound/luts/*.h` (generated
-by `hosttest/lutgen`), `CMakeLists.txt`, this file.
+by `hosttest/lutgen`), `cpus/M68K/s68kcpu.c` and `s68ki_cycles_full.h` (the
+Sega CD sub CPU, see m68kcpu.c below), `CMakeLists.txt`, this file.
 
 ## Build contract
 
@@ -84,9 +85,19 @@ and the sound-seam prototypes (`gwsnd_ym_write` / `gwsnd_ym_read` /
   - `SRAM_ADDR` / `TIME_CTRL` cases in `gwenesis_bus_read_memory_8/16` and
     `gwenesis_bus_write_memory_8/16`. A `TIME_CTRL` write other than
     `$A130F1` goes on to the ROM mapper (`gwmapper_bank_write()`), which owns
-    the bank registers `$A130F3-$FF`.
+    the bank registers `$A130F3-$FF` (and Pier Solar's `$A13001-$0B`,
+    `port/gwpier.h`, whose EEPROM also answers the `TIME_CTRL` byte read).
+- Sega CD and MD+ (`scd/PORTING.md`), all under `GENESIS_SEGACD` and all on
+  paths a plain cartridge never takes:
+  - `gwenesis_bus_map_io_address()`: `$A12000-$A120FF` returns the new
+    `MCD_CTRL` in a CD session (`gwcd_bus_mode & GWCD_BUS_SCD`), whose
+    read/write cases call `gwcd_m68k_io_*` (the gate array).
+  - `ROM_ADDR` write cases: upstream dropped every write below `$800000`. In
+    a CD or MD+ session they go to `gwcd_m68k_write8/16` (PRG-RAM, Word-RAM,
+    the MegaSD registers); a plain cartridge still drops them.
 
 ### `bus/gwenesis_bus.h`
+- The address-class enum gains `MCD_CTRL` (Sega CD gate array, see above).
 - `enum gwenesis_bus_pad_button` gains `PAD_Z`, `PAD_Y`, `PAD_X`, `PAD_M`
   (bits 8-11 of `button_state[]`, see `io/gwenesis_io.c`).
 - `GWENESIS_AUDIO_BUFFER_LENGTH_PAL` 1056 → **1072**: a PAL frame
@@ -106,8 +117,10 @@ and the sound-seam prototypes (`gwsnd_ym_write` / `gwsnd_ym_read` /
 - `GWENESIS_PICO` branch: `ROM_DATA` as const pointer + masked
   `FETCH8/16/32ROM` macros.
 - ROM bank switching for carts larger than 4 MB (Super Street Fighter II and
-  Everdrive-"SSF" homebrew): `FETCH8/16/32ROM` index a table of sixteen 512 KB
-  pages, `gw_rom` in `port/gwmapper.h`, instead of the single pointer. Every
+  Everdrive-"SSF" homebrew): `FETCH8/16/32ROM` index a table of sixty-four
+  128 KB pages, `gw_rom` in `port/gwmapper.h`, instead of the single pointer
+  (an SSF2 bank of 512 KB fills four; the finer grain is for the Sega CD,
+  which maps its BIOS, PRG-RAM window and Word-RAM halves here). Every
   cartridge-ROM read in the core goes through these three macros — 68000
   instruction fetch, `m68ki_read_*`, PC-relative reads, the bus (and with it
   the Z80 bank window) and VDP DMA — so none of those needed touching. For a
@@ -121,6 +134,16 @@ and the sound-seam prototypes (`gwsnd_ym_write` / `gwsnd_ym_read` /
   This file is CRLF, like `m68kcpu.{c,h}`.
 - `cpu_memory_map memory_map[256]` (5 KB) compiled out of
   `m68ki_cpu_core` — every reader is inside `#if 0` in m68kcpu.h.
+- **Bug fix**: `m68k_read_pcrelative_8/16/32` always read `FETCH*ROM`, so
+  code running in work RAM that used `d(PC)` or `d(PC,Xn)` read the ROM
+  mirror instead of its own tables. They now take the same
+  `(A & 0x800000) ? RAM : ROM` split as the immediate fetch. Sega CD main
+  programs run from `$FF0000` and depend on it. Of the test ROMs only
+  *Virtua Racing* renders differently (it runs code from RAM).
+- `m68k_end_timeslice()` declared (see m68kcpu.c).
+- Under `GWENESIS_S68K` (the Sega CD sub CPU, `s68kcpu.c`): immediate and
+  PC-relative reads go through the sub CPU's page map,
+  `port/scd_s68k_mem.h`.
 
 ### `cpus/M68K/m68kcpu.h`
 - `m68ki_read_8/16/32` short-circuit everything below `$800000` straight to
@@ -149,9 +172,49 @@ and the sound-seam prototypes (`gwsnd_ym_write` / `gwsnd_ym_read` /
   relative displacement is +/-32 KB, so neither can reach save RAM from
   code running in ROM.
 
+### `cpus/M68K/m68kcpu.h` (sub CPU)
+- Under `GWENESIS_S68K`, `m68ki_read/write_8/16/32` go straight to the sub
+  CPU's page map (`s68k_read*/s68k_write*`), without any of the main CPU's
+  ROM, RAM or save-RAM shortcuts.
+
 ### `cpus/M68K/m68kcpu.c`
 - `GW_SRAM_FUNC` on `m68k_run` (dispatch loop only; the opcode handlers
   and the 320 KB `TABLES_FULL` const tables stay in flash).
+- `m68k_run()` loops on `m68k.cycle_end` instead of its local `cycles`
+  argument, and the new `m68k_end_timeslice()` sets `cycle_end` to the
+  current count, so a memory handler can stop the CPU after the current
+  instruction. The Sega CD uses it to hand over between the two 68000s
+  (PicoDrive's `SekEndRun`). One extra load per instruction; cartridge
+  output is unchanged.
+- Under `GWENESIS_S68K`: `MUL (1)` (the sub CPU counts its own 12.5 MHz
+  cycles, not master clocks) and the cycle table `s68ki_cycles_full.h`.
+- Wait-loop skipping, Sega CD only (`GENESIS_SEGACD`; `-DGWCD_IDLE_SKIP=0`
+  turns it off). `m68ki_branch_8/16` (m68kcpu.h) call an idle check on a
+  taken backward Bcc/BRA (not DBcc, not BSR: `M68KI_LOOP_BRANCH`); the rest
+  of the CPU's run is then skipped -- the time passes, nothing executes --
+  when the loop can only repeat itself until the run ends:
+  - sub CPU (`s68ki_idle_check`, s68kcpu.c): the same loop head with the
+    same registers and flags, no memory write that changed anything, no
+    read with a side effect (the CDC ports). Every run ends at the next CD
+    event, and nothing else runs during it, so this is exact. The sub CPU
+    is then also parked (`gwcd_s68k_park`, port/scd.c) until something
+    could end the loop -- otherwise the scheduler would start it again every
+    scanline, which on the Pico costs more than the loop did and keeps
+    PicoDrive's own poll detection from ever firing. A loop on the
+    stopwatch or the PCM playback position is not parked, and sees the
+    change up to one run (a scanline) late.
+  - main CPU (`m68ki_idle_check`, m68kcpu.c), only while `gwcd_m68k_idle`
+    is set (a Sega CD session; 0 for cartridges, which then pay one flag
+    test per backward branch): a loop of exactly one test instruction on
+    work RAM and the branch back -- the usual wait for vertical blank.
+  Cartridge output is byte-identical; Sega CD frames are identical, audio
+  moves by at most a scanline where a loop's exit does.
+- New file `s68kcpu.c` compiles this core a second time as the Sega CD sub
+  CPU: `GWENESIS_S68K=1`, `#define m68k s68k`, every exported name renamed.
+  This is how Genesis Plus GX, which this Musashi fork comes from, runs it.
+  `s68ki_cycles_full.h` is the generated `m68ki_cycles_full.h` with each
+  `*7` turned into `*1` (CRLF kept). It also holds the sub CPU's idle
+  check (above).
 - Host-only `gwenesis_host_cpu_read8()` test hook exposing `m68ki_read_8`
   (see the m68kcpu.h note above). Compiled out of the firmware.
 
@@ -196,7 +259,12 @@ and the sound-seam prototypes (`gwsnd_ym_write` / `gwsnd_ym_read` /
   `eg_rate_select/shift`, `lfo_samples_per_step`) placed in RAM via
   `GW_SRAM_DATA`.
 - `GW_SRAM_FUNC` on `YM2612Update`/`ym2612_run`/`YM2612Write`/`YM2612Read`.
-- No synthesis-logic changes.
+- **Bug fix**: `YM2612Init()` clears the chip state, DETUNE table included,
+  but upstream built that table only once, in the first `init_tables()`.
+  Every game after the first one since boot (the firmware starts games
+  without rebooting) played its FM without detune. The table is now built
+  by `build_detune_table()` at the end of every `YM2612Init()`.
+- No other synthesis-logic changes.
 
 ### `sound/ym2612.h`, `sound/gwenesis_sn76489.h`
 - Audio buffer externs become pointers under `GWENESIS_PICO` (allocated
@@ -255,6 +323,11 @@ and the sound-seam prototypes (`gwsnd_ym_write` / `gwsnd_ym_read` /
   (format selected by `GWENESIS_PIXEL_FMT`).
 - `GW_SRAM_FUNC` on `gwenesis_vdp_vram_write`, `gwenesis_vdp_hcounter`,
   `gwenesis_vdp_read/write_memory_16`.
+- 68000-to-VRAM DMA in a Sega CD session (`GENESIS_SEGACD`): the source
+  goes through `dma_m68k_cd()`, an out-of-line helper in flash that reads
+  with `gwcd_dma_read16()` (PicoDrive's DmaSlow: Word-RAM is read one word
+  late and wraps in its bank, the 1M cell image through the cell mapping).
+  Cartridge DMA keeps upstream's switch.
 
 ### `vdp/gwenesis_vdp_gfx.c`
 - The 16-bit renderer (upstream's Game & Watch branch) is selected under

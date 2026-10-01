@@ -1889,8 +1889,8 @@ static void init_tables(void)
 {
 #if GWENESIS_CONST_LUTS
   /* tl_tab / sin_tab / lfo_pm_table are const flash arrays
-     (gwenesis/sound/luts/) — only the integer DETUNE table remains. */
-  signed int d,i;
+     (gwenesis/sound/luts/); the integer DETUNE table is built per
+     YM2612Init() (build_detune_table), so nothing is left to do here. */
 #else
   //printf("YM2612 init tables\n");
   signed int d,i,x;
@@ -1997,7 +1997,15 @@ static void init_tables(void)
   }
 #endif /* !GWENESIS_CONST_LUTS */
 
-  /* build DETUNE table */
+}
+
+/* PORT: the DETUNE table lives in the chip state, which YM2612Init()
+   clears, so it is built there every time rather than once in
+   init_tables() (see YM2612Init). */
+static void build_detune_table(void)
+{
+  int d, i;
+
   for (d = 0;d <= 3;d++)
   {
     for (i = 0;i <= 31;i++)
@@ -2006,7 +2014,6 @@ static void init_tables(void)
       ym2612.OPN.ST.dt_tab[d+4][i] = -ym2612.OPN.ST.dt_tab[d][i];
     }
   }
-
 }
 
 #if GWENESIS_CONST_LUTS && defined(GWENESIS_LUTS_IN_RAM) && GWENESIS_LUTS_IN_RAM != 0
@@ -2033,6 +2040,11 @@ void YM2612Init(void) {
     init_tables();
     init_table_done = 1;
   }
+  /* PORT: bug fix. The memset above also clears the DETUNE table, which
+     upstream built only on the first call: every game after the first one
+     since boot played its FM without detune (the firmware starts a new game
+     without rebooting). */
+  build_detune_table();
 }
 
 /* reset OPN registers */

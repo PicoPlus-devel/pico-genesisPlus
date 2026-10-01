@@ -29,6 +29,16 @@ Contract:
 #define GWENESIS_LINE_PACE(line, lines_per_frame) ((void)0)
 #endif
 
+/* Sega CD (port/scd.h): the sub 68000 and the rest of the Mega-CD run
+   alongside the main CPU line by line; an MD+ game needs its 75 Hz MegaSD
+   tick. Without a CD session these are the plain cartridge calls. */
+#if GENESIS_SEGACD
+#include "scd.h"
+#define GWENESIS_M68K_RUN(target) gwcd_run_line(target)
+#else
+#define GWENESIS_M68K_RUN(target) m68k_run(target)
+#endif
+
 /* Core globals not exported through headers. */
 extern unsigned char gwenesis_vdp_regs[];
 extern unsigned short gwenesis_vdp_status;
@@ -72,11 +82,15 @@ static void gwenesis_frame_run(int draw_frame)
     zclk = 0;
     scan_line = 0;
 
+#if GENESIS_SEGACD
+    gwcd_frame_start();
+#endif
+
     while (scan_line < gwenesis_frame_lines_per_frame) {
 
         /* CPUs, interleaved per scanline; the sound chips catch up on
            every register access inside these (GWENESIS_AUDIO_ACCURATE). */
-        m68k_run(system_clock + VDP_CYCLES_PER_LINE);
+        GWENESIS_M68K_RUN(system_clock + VDP_CYCLES_PER_LINE);
         z80_run(system_clock + VDP_CYCLES_PER_LINE);
 
         /* Both CPUs are done with this line: let the sound engine make
@@ -125,6 +139,13 @@ static void gwenesis_frame_run(int draw_frame)
            sound engine has work to do while the pacer waits. */
         GWENESIS_LINE_PACE(scan_line, gwenesis_frame_lines_per_frame);
     }
+
+#if GENESIS_SEGACD
+    /* Before the sound engine's frame end, so the frame's PCM is queued
+       when it mixes, and before the rebase below (the CD code keeps the
+       main CPU's time on a monotonic scale). */
+    gwcd_frame_end(system_clock, gwenesis_frame_is_pal);
+#endif
 
     /* Top up both sound chips to the frame boundary, emit the frame's
        audio, and rebase the chip clocks. */

@@ -7,3 +7,6 @@
 [submodule "tusb_xinput"]
 	path = tusb_xinput
 	url = https://github.com/PicoPlus-devel/tusb_xinput.git
+[submodule "external/libchdr"]
+	path = external/libchdr
+	url = https://github.com/PicoPlus-devel/libchdr.git

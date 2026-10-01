@@ -21,6 +21,7 @@ status divergence — this is the proof that offload-mode reads are exact.
 #include "ym2612.h"
 #include "gwenesis_sn76489.h"
 #include "gwsnd.h"
+#include "scd.h"
 
 static int gwsnd_offload_active = 0;
 static int gwsnd_cur_pal = 0;
@@ -190,6 +191,13 @@ void gwsnd_frame_end(int system_clock)
     int samples = ym2612_index;
     if (gwsnd_frame_tap)
         gwsnd_frame_tap(gwenesis_ym2612_buffer, gwenesis_sn76489_buffer, samples);
+#if GENESIS_SEGACD
+    /* Sync mode has no core1 task to prefetch CD-DA; top the ring up here,
+       a frame's worth of sectors plus slack. */
+    if (gwcd_bus_mode != GWCD_BUS_CART)
+        for (int i = 0; i < 4; i++)
+            gwcd_cdda_service();
+#endif
     gwsnd_resample_mix_feed(0, samples);
     if (gwsnd_fill_query_fn)
         gwsnd_set_fill_permille(gwsnd_fill_query_fn());

@@ -10,9 +10,14 @@ mapper unless it knows better.
 #include <stdint.h>
 
 #include "gwmapper.h"
+#if GENESIS_SEGACD
+#include "gwpier.h"
+#endif
 
-/* The cartridge half of the 68000 map ($000000-$7FFFFF) in 512 KB slots. */
-#define WINDOW_SLOTS 16u
+/* The cartridge half of the 68000 map ($000000-$7FFFFF) in 128 KB slots. */
+#define WINDOW_SLOTS GWMAPPER_SLOTS
+/* Page-table slots per 512 KB SSF2 bank. */
+#define SLOTS_PER_BANK (GWMAPPER_BANK_SIZE / GWMAPPER_SLOT_SIZE)
 /* Carts up to this size fit the window without banking. */
 #define LINEAR_LIMIT 0x400000u
 
@@ -40,7 +45,7 @@ static int header_is(const unsigned char *rom, uint32_t off, const char *s)
 /* Where ROM offset `off` lives. Offsets past the end of the image are not
    checked: the table has always pointed past a non power-of-two image (reads
    there are open bus on real hardware), and bank writes are range checked. */
-static const unsigned char *bank_ptr(uint32_t off)
+const unsigned char *gwmapper_rom_at(uint32_t off)
 {
     if (st_tail && off >= st_head_len)
         return st_tail + (off - st_head_len);
@@ -70,18 +75,24 @@ void gwmapper_reset(const unsigned char *rom, size_t size, unsigned int addr_mas
     rom_size = (uint32_t)size;
 
     /* Power-on mapping, identical to ROM_DATA[A & rom_addr_mask]. */
-    if (addr_mask < GWMAPPER_BANK_SIZE) {
+    if (addr_mask < GWMAPPER_SLOT_SIZE) {
         gw_rom.page_mask = addr_mask;
         for (i = 0; i < WINDOW_SLOTS; i++)
             gw_rom.bank[i] = st_head;
     } else {
-        gw_rom.page_mask = GWMAPPER_BANK_SIZE - 1u;
+        gw_rom.page_mask = GWMAPPER_SLOT_SIZE - 1u;
         for (i = 0; i < WINDOW_SLOTS; i++)
-            gw_rom.bank[i] = bank_ptr((i << GWMAPPER_BANK_SHIFT) & addr_mask);
+            gw_rom.bank[i] = gwmapper_rom_at((i << GWMAPPER_SLOT_SHIFT) & addr_mask);
     }
 
     mapper_on = rom_size > LINEAR_LIMIT ||
                 (rom_size >= 0x108 && header_is(st_head, 0x100, "SEGA SSF"));
+#if GENESIS_SEGACD
+    /* Pier Solar is 8 MB but has a mapper of its own (port/gwpier.h). Called
+       for every cartridge: it also releases the previous game's buffers. */
+    if (gwpier_reset(rom, size))
+        mapper_on = 0;
+#endif
 
     if (mapper_on)
         printf("ROM mapper: bank switching on, %u banks of 512 KB%s\n",
@@ -95,8 +106,15 @@ void gwmapper_reset(const unsigned char *rom, size_t size, unsigned int addr_mas
 
 void gwmapper_bank_write(unsigned int address, unsigned int value)
 {
-    uint32_t slot, off;
+    uint32_t slot, off, i;
 
+#if GENESIS_SEGACD
+    /* Pier Solar's registers are in the same /TIME region, $A13001-$A1300B */
+    if (gwpier_active) {
+        gwpier_write8(address, value);
+        return;
+    }
+#endif
     if (!mapper_on)
         return;
     /* $A130F3, F5 .. FF: odd addresses only. $A130F1 is save RAM control and
@@ -109,7 +127,10 @@ void gwmapper_bank_write(unsigned int address, unsigned int value)
     off = (uint32_t)(value & 0xFFu) << GWMAPPER_BANK_SHIFT;
     if (off >= rom_size)
         return; /* no such bank: keep the old one, as picodrive does */
-    gw_rom.bank[slot] = bank_ptr(off);
+    /* A split image falls on a 512 KB boundary, so the four slots of a bank
+       all come from the same half. */
+    for (i = 0; i < SLOTS_PER_BANK; i++)
+        gw_rom.bank[slot * SLOTS_PER_BANK + i] = gwmapper_rom_at(off + i * GWMAPPER_SLOT_SIZE);
 #if defined(GWENESIS_HOST) && GWENESIS_HOST != 0
     gwmapper_bank_writes++;
 #endif

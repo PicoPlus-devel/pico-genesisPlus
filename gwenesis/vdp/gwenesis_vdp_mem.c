@@ -28,6 +28,7 @@ __license__ = "GPLv3"
 #include "gwenesis_bus.h"
 #include "gwenesis_sn76489.h"
 #include "gwenesis_savestate.h"
+#include "scd.h"
 #include "gwenesis_port.h"
 
 #include <assert.h>
@@ -486,6 +487,59 @@ void gwenesis_vdp_dma_fill(unsigned short value)
 
 }
 
+#if GENESIS_SEGACD
+/* PORT: gwenesis_vdp_dma_m68k()'s 68000-space source loops for a Sega CD
+   session, reading through gwcd_dma_read16() (port/scd.c: Word-RAM one word
+   late, the cell image through its mapping). Kept out of line and in flash;
+   returns the source address after the transfer. */
+static unsigned int __attribute__((noinline)) dma_m68k_cd(unsigned int src_addr, int dma_length)
+{
+    unsigned int value;
+
+    switch (code_reg & 0xF) {
+
+    case 0x1: // dest is VRAM
+      do {
+        value = gwcd_dma_read16(src_addr);
+        push_fifo(value);
+        gwenesis_vdp_vram_write((address_reg)&0xFFFF, value >> 8);
+        gwenesis_vdp_vram_write((address_reg ^ 1) & 0xFFFF, value & 0xFF);
+        address_reg += REG15_DMA_INCREMENT;
+        src_addr += 2;
+      } while (--dma_length);
+      break;
+
+    case 0x3: // dest is CRAM
+      do {
+        value = gwcd_dma_read16(src_addr);
+        push_fifo(value);
+        CRAM[(address_reg & 0x7f) >> 1] = value;
+        unsigned short pixel = GWENESIS_CRAM_TO_PIXEL(value);
+        CRAM565[(address_reg & 0x7f) >> 1] = pixel;
+        CRAM565[0x40 + ((address_reg & 0x7f) >> 1)] = pixel;
+        CRAM565[0x80 + ((address_reg & 0x7f) >> 1)] = pixel;
+        CRAM565[0xC0 + ((address_reg & 0x7f) >> 1)] = pixel;
+        address_reg += REG15_DMA_INCREMENT;
+        src_addr += 2;
+      } while (--dma_length);
+      break;
+
+    case 0x5: // dest is VSRAM
+      do {
+        value = gwcd_dma_read16(src_addr);
+        push_fifo(value);
+        VSRAM[(address_reg & 0x7f) >> 1] = value & 0x03FF;
+        address_reg += REG15_DMA_INCREMENT;
+        src_addr += 2;
+      } while (--dma_length);
+      break;
+    default: // dest in unknown
+      break;
+    }
+    return src_addr;
+}
+#endif
+
 /******************************************************************************
  *
  *   SEGA 315-5313 DMA M68K
@@ -573,6 +627,15 @@ void gwenesis_vdp_dma_m68k()
 
     /* source is 68K ROM */
     } else {
+#if GENESIS_SEGACD
+      /* PORT: a Sega CD session reads Word-RAM a word late and the cell
+         image through its mapping; that copy of these loops lives in flash
+         (dma_m68k_cd above), so cartridge DMA keeps its plain fetch and this
+         SRAM-resident path only gains the test. */
+      if (gwcd_bus_mode & GWCD_BUS_SCD)
+        src_addr = dma_m68k_cd(src_addr, dma_length);
+      else
+#endif
 
      // unsigned int dma_source_address = (dma_source_high | dma_source_low) << 1; 
 
