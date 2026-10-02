@@ -5,14 +5,22 @@
 extern int vdp_68k_irq_ack(int int_level);
 
 #define m68ki_cpu m68k
+#if defined(GWENESIS_S68K) && GWENESIS_S68K != 0
+/* PORT: Sega CD sub 68000 (s68kcpu.c renames m68k to s68k): it counts its
+   own 12.5 MHz cycles rather than main-CPU master clocks. */
+#define MUL (1)
+#else
 #define MUL (7)
+#endif
 
 /* ======================================================================== */
 /* ================================ INCLUDES ============================== */
 /* ======================================================================== */
 
 #ifndef BUILD_TABLES
-  #ifndef TABLES_FULL
+  #if defined(GWENESIS_S68K) && GWENESIS_S68K != 0
+    #include "s68ki_cycles_full.h"
+  #elif !defined(TABLES_FULL)
     #include "m68ki_cycles.h"
   #else
     #include "m68ki_cycles_full.h"
@@ -280,7 +288,10 @@ void GW_SRAM_FUNC(m68k_run)(unsigned int cycles)
     return;
   }
 
-  /* Save end cycles count for when CPU is stopped */
+  /* Save end cycles count for when CPU is stopped. PORT: the loop below runs
+     to this field rather than to the `cycles` argument, so a memory handler
+     can end the timeslice early with m68k_end_timeslice() -- the Sega CD
+     syncs the two 68000s that way (scd/PORTING.md). */
   m68k.cycle_end = cycles;
 
   /* Return point for when we have an address error (TODO: use goto) */
@@ -290,7 +301,7 @@ void GW_SRAM_FUNC(m68k_run)(unsigned int cycles)
   error("[%d][%d] m68k run to %d cycles (%x), irq mask = %x (%x)\n", v_counter, m68k.cycles, cycles, m68k.pc,FLAG_INT_MASK, CPU_INT_LEVEL);
 #endif
 
-  while (m68k.cycles < cycles)
+  while (m68k.cycles < m68k.cycle_end)
   {
     /* Set tracing accodring to T1. */
     m68ki_trace_t1() /* auto-disable (see m68kcpu.h) */
@@ -332,6 +343,93 @@ int m68k_cycles_master(void)
 {
 	return m68k.cycles;
 }
+
+/* PORT: stop m68k_run() after the current instruction. The caller sees
+   m68k.cycles short of its target and decides whether to resume. */
+void m68k_end_timeslice(void)
+{
+	m68k.cycle_end = m68k.cycles;
+}
+
+#if defined(GENESIS_SEGACD) && GENESIS_SEGACD != 0 && !(defined(GWENESIS_S68K) && GWENESIS_S68K != 0)
+/* PORT: the main CPU's wait loops in a Sega CD session (m68kcpu.h,
+   m68ki_branch_8/16, only while gwcd_m68k_idle is set by port/scd.c).
+
+   Games and the BIOS wait for vertical blank the usual way: set a flag in
+   work RAM, then test it until the interrupt handler clears it. Sonic CD's
+   video player spends 99% of the main CPU there, the BIOS menu 73%, and in
+   a Sega CD session that is time the sub CPU needs.
+
+   Only the tightest form is recognised: a loop of exactly one test --
+   TST, BTST, CMPI, CMP or MOVE to a data register -- of work RAM, and the
+   branch back to it. Such a loop writes nothing, and nothing else writes
+   work RAM while the main CPU runs: the Z80 runs after it, the sub CPU
+   cannot reach it, and interrupts arrive between runs. So once it has come
+   round once, every pass until the run ends is the same, and the rest of
+   the run is skipped: the time passes, nothing is executed. */
+extern unsigned int gwcd_m68k_skipped;
+
+/* Where a source <ea> in the modes such a loop uses reads, and how many
+   extension words (from `at`) it takes; -1 for any other mode. */
+static int m68ki_idle_ea(uint mode, uint reg, uint at, uint *addr)
+{
+  switch (mode) {
+  case 2: /* (An) */
+    *addr = REG_A[reg];
+    return 0;
+  case 5: /* d16(An) */
+    *addr = REG_A[reg] + MAKE_INT_16(m68k_read_immediate_16(at));
+    return 1;
+  case 7:
+    if (reg == 0) { /* abs.W */
+      *addr = MAKE_INT_16(m68k_read_immediate_16(at));
+      return 1;
+    }
+    if (reg == 1) { /* abs.L */
+      *addr = m68k_read_immediate_32(at);
+      return 2;
+    }
+    break;
+  }
+  return -1;
+}
+
+void m68ki_idle_check(uint branch_pc)
+{
+  uint head = REG_PC, op, at, addr;
+  int ext;
+
+  /* Bcc and BRA only (M68KI_LOOP_BRANCH, m68kcpu.h) */
+  if (branch_pc <= head || branch_pc - head > 10)
+    return;
+  op = m68k_read_immediate_16(head);
+  at = head + 2;
+  if ((op & 0xFF00) == 0x4A00 && (op & 0xC0) != 0xC0) {
+    /* TST.x <ea> (0x4AC0 is TAS, which writes) */
+  } else if ((op & 0xFFC0) == 0x0800) {
+    at += 2; /* BTST #n,<ea> */
+  } else if ((op & 0xF1C0) == 0x0100) {
+    /* BTST Dn,<ea> */
+  } else if ((op & 0xFF00) == 0x0C00 && (op & 0xC0) != 0xC0) {
+    at += (op & 0xC0) == 0x80 ? 4 : 2; /* CMPI.x #imm,<ea> */
+  } else if ((op & 0xF000) == 0xB000 && ((op >> 6) & 7) <= 2) {
+    /* CMP.x <ea>,Dn */
+  } else if ((op & 0xC1C0) == 0 && (op & 0x3000)) {
+    /* MOVE.x <ea>,Dn: the same value every pass */
+  } else {
+    return;
+  }
+  ext = m68ki_idle_ea((op >> 3) & 7, op & 7, at, &addr);
+  if (ext < 0 || at + ext * 2 != branch_pc)
+    return; /* not exactly one instruction before the branch */
+  if ((addr & 0xE00000) != 0xE00000)
+    return; /* work RAM ($E00000-$FFFFFF) only */
+  if (m68k.cycles < m68k.cycle_end) {
+    gwcd_m68k_skipped += m68k.cycle_end - m68k.cycles;
+    m68k.cycles = m68k.cycle_end;
+  }
+}
+#endif
 
 void m68k_init(void)
 {

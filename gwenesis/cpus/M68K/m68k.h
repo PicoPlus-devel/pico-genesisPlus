@@ -163,11 +163,12 @@
 
 #include "gwmapper.h"
 #if GENESIS_ROM_MAPPER
-	/* PORT: cartridge ROM goes through a table of 512 KB pages so carts
-	   larger than 4 MB can bank switch (port/gwmapper.h). For every other
-	   cart the table reproduces ROM_DATA[A & rom_addr_mask] exactly. */
-#define GW_ROM_AT(A) (&gw_rom.bank[((A) >> 19) & 0xF][(A) & gw_rom.page_mask])
-#define FETCH8ROM(A) (gw_rom.bank[((A) >> 19) & 0xF][((A) & gw_rom.page_mask) ^ 1])
+	/* PORT: cartridge ROM goes through a table of 128 KB pages so carts
+	   larger than 4 MB can bank switch (port/gwmapper.h), and so the Sega CD
+	   can map BIOS, PRG-RAM and Word-RAM here. For every other cart the
+	   table reproduces ROM_DATA[A & rom_addr_mask] exactly. */
+#define GW_ROM_AT(A) (&gw_rom.bank[((A) >> 17) & 0x3F][(A) & gw_rom.page_mask])
+#define FETCH8ROM(A) (gw_rom.bank[((A) >> 17) & 0x3F][((A) & gw_rom.page_mask) ^ 1])
 #define FETCH16ROM(A) ((*(const unsigned short *)GW_ROM_AT(A)))
 #define FETCH32ROM(A) ( (*(const unsigned int *)GW_ROM_AT(A) << 16) | (*(const unsigned int *)GW_ROM_AT(A) >> 16) )
 #else
@@ -217,9 +218,30 @@
 #define m68k_read_immediate_16(A) ( ( (A) & 0x800000) ? FETCH16RAM((A)) : FETCH16ROM((A)) )
 #define m68k_read_immediate_32(A) ( ( (A) & 0x800000) ? FETCH32RAM((A)) : FETCH32ROM((A)) )
 
-#define m68k_read_pcrelative_8(A) ( FETCH8ROM((A)) )
-#define m68k_read_pcrelative_16(A) ( FETCH16ROM((A)) )
-#define m68k_read_pcrelative_32(A) ( FETCH32ROM((A)) )
+/* PORT: upstream read every PC-relative operand from ROM, so code running in
+   work RAM that used d(PC) or d(PC,Xn) read the ROM mirror instead of its own
+   tables. Sega CD main programs run from $FF0000 and do this constantly. Same
+   RAM/ROM split as the immediate fetch above. */
+#define m68k_read_pcrelative_8(A) ( ( (A) & 0x800000) ? FETCH8RAM((A)) : FETCH8ROM((A)) )
+#define m68k_read_pcrelative_16(A) ( ( (A) & 0x800000) ? FETCH16RAM((A)) : FETCH16ROM((A)) )
+#define m68k_read_pcrelative_32(A) ( ( (A) & 0x800000) ? FETCH32RAM((A)) : FETCH32ROM((A)) )
+
+#if defined(GWENESIS_S68K) && GWENESIS_S68K != 0
+/* PORT: the Sega CD sub 68000 (s68kcpu.c) is a second compile of this core.
+   Its bus has nothing in common with the main CPU's, so instruction fetch and
+   PC-relative reads go through its own page map (port/scd_s68k_mem.h). */
+#include "scd_s68k_mem.h"
+#undef m68k_read_immediate_16
+#undef m68k_read_immediate_32
+#undef m68k_read_pcrelative_8
+#undef m68k_read_pcrelative_16
+#undef m68k_read_pcrelative_32
+#define m68k_read_immediate_16(A) s68k_read16((A))
+#define m68k_read_immediate_32(A) s68k_read32((A))
+#define m68k_read_pcrelative_8(A) s68k_read8((A))
+#define m68k_read_pcrelative_16(A) s68k_read16((A))
+#define m68k_read_pcrelative_32(A) s68k_read32((A))
+#endif
 
 /* Read from anywhere */
 unsigned int  m68k_read_memory_8(unsigned int address);
@@ -472,6 +494,9 @@ extern int m68k_cycles(void);
 
 /* Number of cycles run so far from start of frame */
 extern int m68k_cycles_master(void);
+
+/* PORT: end the running timeslice after the current instruction. */
+extern void m68k_end_timeslice(void);
 
 /* Number of cycles run so far from run call */
 extern int m68k_cycles_run(void);

@@ -30,6 +30,7 @@ Cross-core rules kept here:
 #include "gwsnd.h"
 #include "gwsnd_fifo.h"
 #include "video_output.h"
+#include "scd.h"
 
 /* implemented in gwsnd_core0.c */
 extern int (*gwsnd_fill_query_fn)(void);
@@ -182,6 +183,13 @@ static void GW_SRAM_FUNC(gwsnd_core1_task)(void)
         gwenesis_SN76489_run(wm);
         feed_up_to(ym2612_index < sn76489_index ? ym2612_index : sn76489_index);
     }
+
+#if GENESIS_SEGACD
+    /* CD-DA prefetch from SD (port/scd_audio.c), after the synthesis so a
+       sector read never delays it; a couple of sectors at most per call. */
+    if (gwcd_bus_mode != GWCD_BUS_CART)
+        gwcd_cdda_service();
+#endif
 
     in_task = 0;
 }

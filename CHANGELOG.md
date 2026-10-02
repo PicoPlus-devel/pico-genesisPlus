@@ -1,6 +1,6 @@
 # CHANGELOG
 
-**v0.17** plays games larger than 4 MB, such as **Super Street Fighter II**, and on the Adafruit Fruit Jam and similar boards even games too large for PSRAM, such as *Demons of Asteborg*. It also adds **6 button controller** support.
+**v0.17** plays **MD+** games on the Adafruit Fruit Jam and similar boards, and games larger than 4 MB, such as **Super Street Fighter II**, even ones too large for PSRAM, such as *Demons of Asteborg*. It also adds **6 button controller** support. Some **Sega CD / Mega-CD** games run as well, others still have bugs and graphical artifacts. Most are too slow to be playable.
 
 
 # General Info
@@ -32,13 +32,18 @@ Only RP2350 (pico 2 based boards) supported. Works best with [Adafruit Fruit Jam
 
 ## What's new
 
+- **Sega CD / Mega-CD games.** On boards with HSTX video and PSRAM, such as the Adafruit Fruit Jam, some Sega CD games now run, others still have bugs and graphical artifacts. Most are too slow to be playable. Pick the game's `.cue` file in the menu; a Sega CD BIOS is needed. See [Sega CD and MD+](https:///github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#sega-cd-and-md).
+- **MD+ games.** Cartridge games patched to play CD quality music, known as MD+, play well with their music on the same boards. Put the game and its disc image side by side with the same name and pick the disc image.
+- **Pier Solar.** *Pier Solar and the Great Architects* now plays and saves its progress, and with its *Enhanced Soundtrack Disc* and a Sega CD BIOS it plays the enhanced soundtrack.
 - **Games larger than 4 MB.** *Super Street Fighter II* now plays. It needs a board with PSRAM, or one whose flash has room for it. ([#21](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/21))
 - **Games too large for PSRAM.** On a board with HSTX video, PSRAM and 16 MB of flash, such as the Adafruit Fruit Jam or a Pimoroni Pico Plus 2, games of up to about 15 MB now run, for example *Demons of Asteborg*. The first time such a game is started, the console asks before it writes the game to flash, which takes about a minute, and then restarts into the game. After that it starts in a few seconds. See [Large games](https:///github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#large-games).
+- **Optional 504 MHz overclock** on the Adafruit Fruit Jam and the Pico Plus 2, in the settings menu. It is off by default and not advised; see [Overclocking](https:///github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#overclocking).
 - **6 button controllers.** Games such as *Super Street Fighter II* can now use the X, Y and Z buttons. The new **Genesis pad** setting chooses between a 3 and a 6 button controller; on **Auto**, the default, the game's cartridge decides. Some older games do not work with a 6 button controller, which is why they still get a 3 button one. ([#30](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/30))
 - **New button layout in games.** Controllers other than Genesis ones are now mapped by the position of their buttons. On a SNES controller Y, B and A are Genesis A, B and C, and L, X and R are X, Y and Z. On a NES controller SELECT, B and A are Genesis A, B and C. The menus are unchanged. See [Buttons in a game](https:///github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#buttons-in-a-game) for all controllers. ([#32](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/32), [#35](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/35))
 
 ## Fixes
 
+- The music of every game after the first one since the board was switched on sounded slightly off. It now sounds the same every time.
 - Fixed memory corruption in games that show a window on the left side of the screen, such as the pause menu of *Demons of Asteborg*.
 - The B button of the AliExpress SNES USB controller works without pressing Y first. ([#26](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/26))
 - A NES controller clone on the GPIO port that could not use its B button in games now has all three Genesis buttons. ([#34](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/34))

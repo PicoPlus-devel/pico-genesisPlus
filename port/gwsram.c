@@ -16,6 +16,7 @@ for the many carts that declare a nonsensical range.
 #include "gwenesis_port.h"
 #include "gwsram.h"
 #include "gwmapper.h"
+#include "scd.h"
 
 /* Cartridge save RAM can only live in the $200000-$3FFFFF half of the cart
    window; anything else in the header is a broken image, not a mapping. */
@@ -256,6 +257,14 @@ unsigned int GW_SRAM_FUNC(gwsram_read8)(unsigned int address)
 {
     unsigned int off;
 
+#if GENESIS_SEGACD
+    /* A Mega-CD session borrows the window for the 1M-mode cell image when
+       there is no cartridge save RAM to serve (port/scd.c), Pier Solar for
+       its dump protection (port/gwpier.c). */
+    if (gwcd_window_cd)
+        return gwcd_m68k_window_read8(address);
+#endif
+
     /* Nothing written yet, so nothing allocated yet: an unwritten chip. */
     if (!gwsram_data)
         return 0xFF;
@@ -272,6 +281,13 @@ unsigned int GW_SRAM_FUNC(gwsram_read8)(unsigned int address)
 void GW_SRAM_FUNC(gwsram_write8)(unsigned int address, unsigned int value)
 {
     unsigned int off;
+
+#if GENESIS_SEGACD
+    if (gwcd_window_cd) {
+        gwcd_m68k_window_write8(address, value);
+        return;
+    }
+#endif
 
     if (gwsram_protect)
         return;
@@ -294,12 +310,24 @@ unsigned int GW_SRAM_FUNC(gwsram_read16)(unsigned int address)
 {
     unsigned int a = address & ~1u;
 
+#if GENESIS_SEGACD
+    if (gwcd_window_cd)
+        return gwcd_m68k_window_read16(a);
+#endif
+
     return (gwsram_read8(a) << 8) | gwsram_read8(a + 1);
 }
 
 void GW_SRAM_FUNC(gwsram_write16)(unsigned int address, unsigned int value)
 {
     unsigned int a = address & ~1u;
+
+#if GENESIS_SEGACD
+    if (gwcd_window_cd) {
+        gwcd_m68k_window_write16(a, value);
+        return;
+    }
+#endif
 
     gwsram_write8(a, (value >> 8) & 0xFF);
     gwsram_write8(a + 1, value & 0xFF);

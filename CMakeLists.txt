@@ -258,6 +258,60 @@ if(GPIOHSTXD0 AND GPIOHSTXD1 AND GPIOHSTXD2 AND GPIOHSTXCK)
     # ROMs too large for PSRAM, run from flash (+ PSRAM). HSTX only: the flash
     # write takes XIP away, which HSTX scan-out survives and PicoDVI does not.
     target_sources(${projectname} PRIVATE romflash.cpp)
+    # Sega CD / Mega-CD and MD+ (port/scd.h): a second 68000 (s68kcpu.c),
+    # PicoDrive's Mega-CD hardware (scd/, see scd/PORTING.md) and the disc,
+    # BIOS and CD audio layers. HSTX builds only, like the core1 sound engine
+    # the CD audio rides on; at run time also PSRAM only (main.cpp), since
+    # every CD buffer lives there. -DGENESIS_SEGACD=0 leaves it out.
+    if (NOT DEFINED GENESIS_SEGACD)
+        set(GENESIS_SEGACD 1 CACHE STRING "Sega CD and MD+ support (HSTX builds)")
+    endif()
+    if (GENESIS_SEGACD)
+        target_compile_definitions(${projectname} PUBLIC GENESIS_SEGACD=1)
+        target_sources(${projectname} PRIVATE
+            gwenesis/cpus/M68K/s68kcpu.c
+            scd/cd/mcd.c
+            scd/cd/memory.c
+            scd/cd/cdc.c
+            scd/cd/cdd.c
+            scd/cd/gfx.c
+            scd/cd/pcm.c
+            scd/cd/misc.c
+            scd/cd/megasd.c
+            port/scd.c
+            port/scd_disc.c
+            port/scd_audio.c
+            port/scd_bios.c
+            port/scd_msd.c
+            port/gwpier.c
+            port/carthw/eeprom_spi.c
+        )
+        target_include_directories(${projectname} PRIVATE scd)
+        # Wait-loop skipping in both 68000s (gwenesis/PORTING.md); building
+        # with -DGWCD_IDLE_SKIP=0 turns it off, for a frame-rate A/B.
+        if (NOT DEFINED GWCD_IDLE_SKIP)
+            set(GWCD_IDLE_SKIP 1 CACHE STRING "Skip the 68000s' wait loops in Sega CD sessions (1) or not (0)")
+        endif()
+        message("Sega CD wait-loop skipping: ${GWCD_IDLE_SKIP}")
+        target_compile_definitions(${projectname} PUBLIC GWCD_IDLE_SKIP=${GWCD_IDLE_SKIP})
+        # Same treatment as the main 68000 (gwenesis/CMakeLists.txt).
+        set_source_files_properties(gwenesis/cpus/M68K/s68kcpu.c
+            PROPERTIES COMPILE_OPTIONS "-O2")
+        # CHD disc images through libchdr (submodule external/libchdr, as in
+        # pico-pcePlus; external/libchdr_pico.cmake). Off by default (cue/bin
+        # only); -DGENESIS_SEGACD_CHD=1 adds them.
+        if (NOT DEFINED GENESIS_SEGACD_CHD)
+            set(GENESIS_SEGACD_CHD 0 CACHE STRING "CHD disc images for Sega CD / MD+")
+        endif()
+        if (GENESIS_SEGACD_CHD)
+            include(${CMAKE_CURRENT_SOURCE_DIR}/external/libchdr_pico.cmake)
+            target_link_libraries(${projectname} PRIVATE libchdr_pico)
+            target_sources(${projectname} PRIVATE port/scd_chd.c)
+            target_compile_definitions(${projectname} PUBLIC GWCD_ENABLE_CHD=1)
+        endif()
+        message("Sega CD CHD images: ${GENESIS_SEGACD_CHD}")
+    endif()
+    message("Sega CD / MD+ support: ${GENESIS_SEGACD}")
 else()
     target_compile_definitions(${projectname} PUBLIC GWENESIS_PIXEL_FMT=444)
 endif()

@@ -10,7 +10,7 @@ byte write to $A130F1 + 2k, i.e. $A130F3 .. $A130FF.
 
 Every cartridge-ROM read in the core -- 68000 instruction fetch, data reads,
 the Z80's bank window and VDP DMA -- goes through FETCH8/16/32ROM in m68k.h,
-so the mapper is a page table underneath those macros: one pointer per 512 KB
+so the mapper is a page table underneath those macros: one pointer per 128 KB
 slot of the 8 MB cartridge half of the address map, plus the in-page mask. For
 a cart without the mapper, gwmapper_reset() fills the table so that it gives
 exactly what the old single pointer did, ROM_DATA[A & rom_addr_mask],
@@ -33,7 +33,7 @@ low half from whatever follows that bank in memory, not from the next slot.
 Splitting FETCH32ROM into two lookups would cost every game; no known code
 reads across a bank boundary.
 
-SRAM: 68 bytes for the table, a few words of state. Nothing is allocated, and
+SRAM: 260 bytes for the table, a few words of state. Nothing is allocated, and
 everything except the table lives in flash -- bank switching is rare next to
 the fetches it steers.
 */
@@ -58,9 +58,18 @@ extern "C" {
 #define GWMAPPER_BANK_SHIFT 19u                      /* 512 KB */
 #define GWMAPPER_BANK_SIZE (1u << GWMAPPER_BANK_SHIFT)
 
+/* The page table itself is finer than the SSF2 bank: 128 KB slots, so one
+   512 KB bank fills four of them. The Sega CD needs the finer grain: its
+   main-CPU map puts the BIOS at $000000 and a PRG-RAM window at $020000, and
+   splits Word-RAM at $220000 in 1M mode (scd/cd/memory.c). The per-fetch cost
+   is the same bit-field extract either way. */
+#define GWMAPPER_SLOT_SHIFT 17u                      /* 128 KB */
+#define GWMAPPER_SLOT_SIZE (1u << GWMAPPER_SLOT_SHIFT)
+#define GWMAPPER_SLOTS 64u                           /* $000000-$7FFFFF */
+
 struct gw_rom_map {
-    const unsigned char *bank[16]; /* one per 512 KB slot of $000000-$7FFFFF */
-    unsigned int page_mask;        /* offset mask within a slot */
+    const unsigned char *bank[GWMAPPER_SLOTS]; /* one per 128 KB slot of $000000-$7FFFFF */
+    unsigned int page_mask;                    /* offset mask within a slot */
 };
 extern struct gw_rom_map gw_rom;
 
@@ -80,6 +89,10 @@ void gwmapper_reset(const unsigned char *rom, size_t size, unsigned int addr_mas
 /* A write to $A130F3-$A130FF (odd addresses). Ignored unless the cart has the
    mapper, and for a bank the ROM does not have. */
 void gwmapper_bank_write(unsigned int address, unsigned int value);
+
+/* Where ROM offset `off` of the loaded image lives, split or not (for the
+   Pier Solar mapper, port/gwpier.c). Not range checked. */
+const unsigned char *gwmapper_rom_at(uint32_t off);
 
 /* Non-zero when the loaded cart uses bank switching. */
 int gwmapper_active(void);

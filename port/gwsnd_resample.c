@@ -18,6 +18,7 @@ never dropped on the floor.
 #include "ym2612.h"
 #include "gwenesis_sn76489.h"
 #include "gwsnd.h"
+#include "scd.h"
 
 static void (*output_fn)(int16_t l, int16_t r);
 static int volume_shift = 1;
@@ -98,6 +99,15 @@ void GW_SRAM_FUNC(gwsnd_resample_mix_feed)(int from, int to)
         while (phase_q16 < 0x10000u) {
             int32_t d = (int32_t)s - (int32_t)last_in;
             int16_t s_out = (int16_t)(last_in + ((d * (int32_t)phase_q16) >> 16));
+#if GENESIS_SEGACD
+            /* Sega CD PCM and CD-DA, and MD+ CD-DA: already at 44.1 kHz,
+               one stereo sample per output sample (port/scd_audio.c). */
+            if (gwcd_bus_mode != GWCD_BUS_CART) {
+                int32_t l = s_out, r = s_out;
+                gwcd_audio_mix(&l, &r);
+                out(sat16(l), sat16(r));
+            } else
+#endif
             out(s_out, s_out);
             phase_q16 += step_q16;
         }

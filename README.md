@@ -1,8 +1,39 @@
 # Pico-genesisPlus
 
-A Sega Genesis/Mega Drive emulator for the Raspberry Pi Pico 2 (RP2350). It plays roms from an SD card and puts the picture on your TV or monitor over HDMI. Connect a game controller, pick a game from the menu and play.
+A Sega Genesis/Mega Drive emulator for the Raspberry Pi Pico 2 (RP2350). It plays games from an SD card and puts the picture on your TV or monitor over HDMI. Connect a game controller, pick a game from the menu and play.
 
-Based on [Gwenesis](https://github.com/bzhxx/gwenesis) by bzhxx.
+Based on [Gwenesis](https://github.com/bzhxx/gwenesis) by bzhxx, with the Sega CD hardware from [PicoDrive](https://github.com/irixxxx/picodrive).
+
+## Features
+
+**Games**
+- Genesis/Mega Drive cartridge roms (`.md`, `.bin`) from every region. The region, and with it 50 or 60 Hz, follows the rom header.
+- Roms larger than 4 MB that switch banks, such as *Super Street Fighter II*, and on boards with HSTX video, PSRAM and 16 MB of flash roms of up to about 15 MB, such as *Demons of Asteborg*. See [Large games](#large-games).
+- Sega CD/Mega-CD discs as `.cue`/`.bin`, on boards with HSTX video and PSRAM. A Sega CD BIOS is needed. Some games run, others still have bugs and graphical artifacts. Most are too slow to be playable. See [Sega CD and MD+](#sega-cd-and-md).
+- MD+ games, cartridge games patched to play CD audio, and cartridge games that use an attached Sega CD, such as *Pier Solar* with its *Enhanced Soundtrack Disc*. See [MD+ games](#md-games) and [Cartridge games with a Sega CD disc](#cartridge-games-with-a-sega-cd-disc).
+- Battery-backed cartridge saves, *Pier Solar*'s EEPROM and the Sega CD's backup memory, kept on the SD card in the file layouts PC emulators use. See [Saved games](#saved-games).
+
+**Picture and sound**
+- 60 Hz HDMI output with sound on boards with HSTX video. Other boards use the PicoDVI driver at 77.1 Hz, and games run slower there. See [Supported boards](#supported-boards).
+- Screen modes with and without scanlines, [frame skip](#frame-skip) and a framerate display.
+- On the Fruit Jam, sound also through the built-in speaker and the headphone jack, with volume control and a VU meter on the board's LEDs. On the Pimoroni Pico DV Demo Base and the Murmulator M1, sound through the line-out jack.
+
+**Controllers**
+- USB controllers (Dual Shock/Dual Sense, PSClassic, XInput, Genesis Mini 1 and 2, Retro-Bit Arcade Pad, NES and SNES style pads), NES and SNES controllers on the GPIO port, SNES Classic and Wii Classic Pro controllers on the Fruit Jam, and a USB keyboard. See [Controllers and buttons](#controllers-and-buttons).
+- 3 and 6 button controllers, chosen per game from the cartridge header or set in the settings menu. Non-Genesis controllers are mapped by the position of their buttons. See [3 and 6 button games](#3-and-6-button-games).
+
+**Menu**
+- A rom browser with folders, [box art and game information](#box-art-and-game-info), a screensaver and a list of [recently played games](#recently-played-games).
+- A settings menu, also available while a game runs, with a controller test.
+- [USB drive mode](#usb-drive-mode): the SD card appears as a USB drive on a computer, so games can be added without removing the card.
+
+**Other**
+- PSRAM is detected at boot. With PSRAM a game starts as soon as it is picked; without it the rom is first written to flash. See [PSRAM](#psram).
+- Runs standalone, or with [pico-bootLoader](#several-emulators-on-one-board) next to other emulators on the same board.
+- An optional 504 MHz overclock on the Fruit Jam and the Pico Plus 2, off by default and not advised. See [Overclocking](#overclocking).
+- A [PC test harness](#pc-test-harness) that runs the emulator core on Linux, for developers.
+
+See [Known limitations](#known-limitations) for what is not supported.
 
 ## Getting started
 
@@ -326,6 +357,26 @@ down. Try it and switch it back on if the game starts to drag.
 Switching the game sound off in the settings menu switches Frame Skip off as well: without
 sound to keep up with, there is room to draw every frame.
 
+## Overclocking
+
+By default the RP2350 is overclocked to 378 MHz on boards with HSTX video and to 324 MHz on
+the others. These are the clocks the emulator is developed and tested with.
+
+On HW_CONFIG 2 (Pimoroni Pico Plus 2 or a Pico 2 with Adafruit DVI breakout, also on the
+PicoNES PCB) and HW_CONFIG 8 (Adafruit Fruit Jam), the settings menu has an optional
+overclock, **Run CPU at high clock**, that raises the clock to 504 MHz at a core voltage of
+1.70 V. It is only offered in the settings menu of the rom browser, not during a game, and
+the board restarts to apply it. It is not offered on the other boards.
+
+> [!WARNING]
+> **The 504 MHz option is not advised. Leave it off.**
+>
+> - **It has not been tested with this emulator.** Cartridge games already run at full speed at 378 MHz. Whether it makes Sega CD games run faster has not been measured.
+> - **It raises the core voltage and makes the chip run considerably hotter.** Sustained operation at that clock and voltage can overheat, destabilise or permanently damage the RP2350 and the board it is on, and shorten its lifetime.
+> - **It can cause instability and crashes**, which is why it is off by default.
+>
+> The option exists for experimenting only. If you enable it, you do so entirely at your own risk.
+
 ## Recently played games
 
 The menu remembers the last 20 games you started, most recent first. Press Button3 in the rom browser to open the list, or pick **Recently played** in the settings menu (SELECT). The settings menu route also works on controllers without a third button, such as a NES pad on the GPIO port.
@@ -367,7 +418,7 @@ Gamepad buttons:
 - **SELECT + UP**: scanlines on or off.
 - **START + Button1**: show or hide the framerate.
 - **SELECT + LEFT** (Pimoroni Pico DV Demo Base and Murmulator M1): switch the sound between HDMI and the line-out jack. The choice is remembered.
-- **SELECT + DOWN**: show performance figures on the serial console. Handy when reporting a problem, not something you need day to day.
+- **SELECT + DOWN**: show performance figures on the serial console, for a Sega CD game including how busy its two processors are. Handy when reporting a problem, not something you need day to day.
 - **Fruit Jam**:
   - START + LEFT / START + RIGHT: volume down and up.
   - SELECT + RIGHT, or pushbutton 2 on the board: turn the VU meter on or off (the NeoPixel LEDs light up in time with the music).
@@ -392,9 +443,52 @@ The files live in the `/SAVES` folder on the card, one per game, named after the
 
 Some games — many of the homebrew ones built with SGDK — declare a much larger save memory than they use. On a board with PSRAM those get their memory there, which costs nothing since save memory is only touched when a game loads or stores progress. On a board without PSRAM such a game plays normally but cannot save, and says so on the serial console.
 
-Two kinds of cartridge are not covered:
-- Games with a serial EEPROM instead of a RAM chip: *Wonder Boy in Monster World*, *NBA Jam*, *Micro Machines 2*, *Mega Man: The Wily Wars*. They play, but cannot save.
-- Games that saved to something other than the cartridge, such as the Sega CD backup RAM.
+Games with a serial EEPROM instead of a RAM chip are not covered: *Wonder Boy in Monster World*, *NBA Jam*, *Micro Machines 2*, *Mega Man: The Wily Wars*. They play, but cannot save. *Pier Solar* is the exception, on boards with HSTX video and PSRAM: its EEPROM is emulated and saved to a 64 KB `.srm` file in the layout PicoDrive uses.
+
+Sega CD games save to the console's own backup memory instead, see [Sega CD and MD+](#sega-cd-and-md).
+
+## Sega CD and MD+
+
+On a board with HSTX video and PSRAM — the Adafruit Fruit Jam, the Adafruit Metro RP2350 with PSRAM, a Pimoroni Pico Plus 2 in the `-c2` build — the emulator also plays Sega CD (Mega-CD) discs and MD+ games. The disc is read from the SD card while the game runs; everything the Sega CD adds to the console is held in PSRAM. Boards without PSRAM, and builds that use the PicoDVI driver, do not list disc images.
+
+> [!NOTE]
+> Some Sega CD games run, others still have bugs and graphical artifacts. Most are too slow to be playable. MD+ games run well.
+
+### Disc images
+
+- **`.cue` with `.bin`**, as one file for the whole disc or one file per track (the Redump layout). A `.cue` may also refer to `.iso` data tracks and `.wav` audio tracks.
+- `.chd` images are not supported.
+- Audio tracks in MP3 or OGG format are not supported; convert them to WAV.
+
+Keep each game in a folder of its own; the discs of a game on several discs go in the same folder. In a folder that holds a `.cue` file, the menu lists only the disc images and hides the track files, a BIOS file and an MD+ rom next to them. Select the `.cue` file to start the game.
+
+### Games on several discs
+
+Some games come on more than one disc. Keep all discs of such a game in one folder, and either name them the way Redump does, with `(Disc 1)`, `(Disc 2)` and so on in the file name, for example `Night Trap (USA) (Disc 1).cue` and `Night Trap (USA) (Disc 2).cue`, or list them in an `.m3u` playlist: a text file with one disc image per line, in disc order, relative to the playlist's folder. Start the game from disc 1, or from the playlist.
+
+When the game asks for another disc, open the settings menu with SELECT + START. While a game on several discs runs, the first entry of the menu is **Change disc**: choose the disc with LEFT and RIGHT and press Button2. The menu closes, the Sega CD reports its lid open for about a second, as when a disc is swapped on the console, and then finds the new disc. Choosing **Reset** in the same entry resets the game instead.
+
+A game that opens the disc tray itself, which the model 1 Sega CD can do, gets the next disc of the set automatically, and finds it when it closes the tray again.
+
+### BIOS
+
+A Sega CD needs its BIOS, which is not included. Copy one or more BIOS files to a folder named `bios` at the root of the SD card; the menu hides that folder. A BIOS file is 128 KB and usually has a `.md` or `.bin` extension; the file name does not matter, the emulator identifies each file by its contents.
+
+When a disc is started, the emulator uses the BIOS that matches the region of the disc: a Sega CD BIOS for an American disc, a European Mega-CD BIOS for a European disc, a Japanese Mega-CD BIOS for a Japanese disc. With several matching files it prefers a known original dump, and among those the Sega CD 2 / Mega-CD 2 versions. A BIOS placed in the game's own folder is used before the ones in `/bios`. When no BIOS matches the disc's region, another one is tried; only region-free modified BIOS files accept a disc from another region. The BIOS region also sets the console region, so a European disc runs at 50 Hz.
+
+### Backup memory
+
+The Sega CD's internal backup memory holds the saved games of all Sega CD games together, as on the console. It is kept in the `/SAVES` folder as `scd_U.brm`, `scd_E.brm` or `scd_J.brm`, one per BIOS region. The files are 8 KB and use the same layout as Genesis Plus GX and PicoDrive. As with cartridge saves, the file is written when you quit the game, when you reset it, and when you open the settings menu with SELECT + START.
+
+### MD+ games
+
+MD+ games are cartridge games patched to play CD-quality music through the interface of the MegaSD flash cartridge. They do not need a Sega CD BIOS. Put the patched rom and its disc image in the same folder, and select the disc image. The rom that goes with the disc is the one with the same name, for example `Streets of Rage 2 MD+.md` next to `Streets of Rage 2 MD+.cue`; failing that, the only Mega Drive rom in the folder. A rom too large to share PSRAM with the disc is written to flash first, as described in [Large games](#large-games). The `REM LOOP` and `REM NOLOOP` lines that some MD+ `.cue` files use to set where a track loops are supported.
+
+### Cartridge games with a Sega CD disc
+
+A few cartridge games use a Sega CD when one is attached, such as *Pier Solar and the Great Architects* with its *Enhanced Soundtrack Disc*. Put the rom and the disc image in the same folder, following the MD+ rule above, and select the disc image. When the disc is a Sega CD disc and a BIOS is present, the cartridge starts with the Sega CD attached; without a BIOS it starts as an MD+ game. The BIOS is chosen by the region the cartridge runs in rather than by the disc: a multi-region cartridge such as *Pier Solar* runs as an American game and uses a Sega CD BIOS, whatever region the disc reports.
+
+*Pier Solar* keeps its saved games in a memory chip of its own, which is saved like cartridge save memory, see [Saved games](#saved-games). At 8 MB the rom does not fit in PSRAM beside the disc, so it is written to flash the first time, as described in [Large games](#large-games).
 
 ## Box art and game info
 
@@ -404,14 +498,15 @@ Download the metadata pack from the [releases page](https:///github.com/PicoPlus
 
 ## Known limitations
 
-- **No saves on cartridges with a serial EEPROM**, such as *Wonder Boy in Monster World*, *NBA Jam*, *Micro Machines 2* and *Mega Man: The Wily Wars*. Ordinary battery-backed cartridges do save, see [Saved games](#saved-games). ([#20](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/20))
+- **No saves on cartridges with a serial EEPROM**, such as *Wonder Boy in Monster World*, *NBA Jam*, *Micro Machines 2* and *Mega Man: The Wily Wars*; *Pier Solar* is the exception. Ordinary battery-backed cartridges do save, see [Saved games](#saved-games). ([#20](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/20))
 - **Roms larger than 8 MB** need a board with HSTX video, PSRAM and 16 MB of flash, and roms larger than about 15 MB do not run at all. See [Large games](#large-games).
 - **Region follows the rom header.** A Europe-only rom runs at 50 Hz, everything else at 60 Hz. Multi-region roms (marked `JUE`) run at 60 Hz, as they would on an American console — there is no setting to force 50 Hz. ([#24](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/24))
 - **Sound is mono.** Both sound chips are mixed into one channel that goes to the left and the right speaker alike, so a game that puts a sound on one side — the stereo effects in *Sonic* or *Streets of Rage* — plays it in the middle instead. ([#22](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/22))
 - **No interlace mode.** The parts of a game that use it show a blank screen — the two-player mode of *Sonic the Hedgehog 2*, for example. ([#23](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/23))
 - **77.1 Hz on non-HSTX boards**, which not every monitor accepts. See the [warning above](#supported-boards) and [#4](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/4).
 - **Games run slower on PicoDVI boards.** Boards without HSTX cannot keep up with full speed, see [Speed on PicoDVI boards](#speed-on-picodvi-boards).
-- **Mega Drive roms only.** Files that are not Mega Drive roms are refused with a message instead of starting the emulator on whatever the file happens to contain.
+- **Mega Drive roms and Sega CD discs only.** Files that are neither are refused with a message instead of starting the emulator on whatever the file happens to contain.
+- **Sega CD games run too slow.** Some games run, others still have bugs and graphical artifacts. Most are too slow to be playable. MD+ games are not affected. Disc images need a board with HSTX video and PSRAM, and only `.cue`/`.bin` images are supported, not `.chd`. There is no support for the backup RAM cartridge or for CD+G.
 - **A NES pad clone on the GPIO port may get a different button layout.** The port tells NES and SNES pads apart by the shift register outputs a NES pad does not use, which an original Nintendo pad grounds. A clone that leaves them floating is taken for a SNES pad: all three Genesis buttons still work, but B is Genesis A, A is Genesis B and SELECT is Genesis C. See [NES and SNES pads on the GPIO port](#nes-and-snes-pads-on-the-gpio-port). ([#28](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/28))
 
 ## For developers
@@ -479,6 +574,13 @@ Cartridge save memory can be exercised too. `GEN_SRM` names a `.srm` file to loa
 GEN_SRAM_SELFTEST=1 GEN_SRM=/tmp/s3.srm ./hosttest/gen_host roms/sonic3.md 600 0 hosttest/out
 ````
 
+Sega CD discs and MD+ games run in the harness as well. Pass the `.cue`, `.chd` or `.m3u` file instead of a rom; a rom next to it is picked up by the firmware's rules, including the Sega CD for a cartridge with a Sega CD disc; `GEN_SCD_DISC="700:2"` changes to disc 2 of the set at frame 700, as the settings menu does; `GEN_SCD_BIOS` names a BIOS file, or `GEN_SCD_BIOS_DIR` a folder to pick one from as the firmware does. Besides `mixed.wav`, a disc run writes `pcm.wav` and `cdda.wav`, the Sega CD's PCM chip and CD audio separately. `GEN_SCD_BRM` names a backup memory file to load and write, `GEN_SCD_STATS=<n>` prints every n frames how busy both processors are, `GEN_SCD_PROFILE=<from>:<to>` shows where their time goes between two frames, and `GEN_PRESS_UP/DOWN/LEFT/RIGHT` hold the d-pad in the same way `GEN_PRESS_START` holds START:
+
+````bash
+GEN_SCD_BIOS_DIR=~/roms/MD/BIOS GEN_PRESS_START=400:410 \
+  ./hosttest/gen_host "roms/Sonic CD (USA)/Sonic CD (USA).cue" 1500 100 hosttest/out
+````
+
 Test roms placed in `hosttest/roms/` are ignored by git.
 
 ## Credits
@@ -493,6 +595,14 @@ Gwenesis is itself built out of other people's work:
 - The **Z80** emulator by **Marat Fayzullin**.
 - **YM2612** FM synthesis from MAME by **Jarek Burczynski** and **Tatsuyuki Satoh**, with additional code and fixes by **Eke-Eke** for Genesis Plus GX.
 - The **SN76489** PSG by **Maxim**, with the SMS Plus modifications by **Charles MacDonald**.
+
+### Sega CD
+
+- The Sega CD hardware — the gate array between the two processors, the CD drive and its controller, the graphics chip and the PCM sound chip — and the MD+ support come from [PicoDrive](https://github.com/irixxxx/picodrive) by **notaz** and **irixxxx**. `scd/` is a vendored copy of upstream commit `26ecb2b6`; every port change is written up in [scd/PORTING.md](scd/PORTING.md). PicoDrive's CD drive, CD controller and graphics chip emulation are in turn by **Eke-Eke**, from Genesis Plus GX.
+- The Sega CD's second 68000 is a second instance of the Musashi core above, the way Genesis Plus GX runs it.
+- The disc image code (`.cue` parsing and CHD reading) and the BIOS lookup follow [pico-pcePlus](https://github.com/PicoPlus-devel/pico-pcePlus).
+- The *Pier Solar* cartridge hardware (bank switching and copy protection) follows PicoDrive; its SPI EEPROM is **Eke-Eke**'s from Genesis Plus GX, by way of PicoDrive.
+- CHD images (not in the release builds): [libchdr](https://github.com/rtissera/libchdr) by **Romain Tisserand** and contributors, with the LZMA SDK by **Igor Pavlov**, [miniz](https://github.com/richgel999/miniz) and [zstd](https://github.com/facebook/zstd).
 
 ### Drivers and libraries
 

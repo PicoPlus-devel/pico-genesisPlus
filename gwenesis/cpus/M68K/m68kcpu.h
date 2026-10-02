@@ -857,6 +857,47 @@ INLINE uint m68ki_read_imm_32(void)
  */
  /*** BZHXX ***/
 
+#if defined(GWENESIS_S68K) && GWENESIS_S68K != 0
+/* PORT: Sega CD sub 68000 -- everything goes through its page map
+   (port/scd_s68k_mem.h); none of the main CPU's ROM/RAM shortcuts apply. */
+INLINE uint m68ki_read_8(uint address)
+{
+  m68ki_set_fc(FLAG_S | m68ki_get_address_space()) /* auto-disable (see m68kcpu.h) */
+  return s68k_read8(ADDRESS_68K(address));
+}
+
+INLINE uint m68ki_read_16(uint address)
+{
+  m68ki_set_fc(FLAG_S | m68ki_get_address_space()) /* auto-disable (see m68kcpu.h) */
+  return s68k_read16(ADDRESS_68K(address));
+}
+
+INLINE uint m68ki_read_32(uint address)
+{
+  m68ki_set_fc(FLAG_S | m68ki_get_address_space()) /* auto-disable (see m68kcpu.h) */
+  return s68k_read32(ADDRESS_68K(address));
+}
+
+INLINE void m68ki_write_8(uint address, uint value)
+{
+  m68ki_set_fc(FLAG_S | FUNCTION_CODE_USER_DATA) /* auto-disable (see m68kcpu.h) */
+  s68k_write8(ADDRESS_68K(address), value);
+}
+
+INLINE void m68ki_write_16(uint address, uint value)
+{
+  m68ki_set_fc(FLAG_S | FUNCTION_CODE_USER_DATA) /* auto-disable (see m68kcpu.h) */
+  s68k_write16(ADDRESS_68K(address), value);
+}
+
+INLINE void m68ki_write_32(uint address, uint value)
+{
+  m68ki_set_fc(FLAG_S | FUNCTION_CODE_USER_DATA) /* auto-disable (see m68kcpu.h) */
+  s68k_write32(ADDRESS_68K(address), value);
+}
+
+#else /* main CPU */
+
 INLINE uint m68ki_read_8(uint address)
 {
 
@@ -931,6 +972,7 @@ INLINE void m68ki_write_32(uint address, uint value)
 	m68k_write_memory_32(ADDRESS_68K(address), value);
 }
 
+#endif /* GWENESIS_S68K */
 
 #if 0
 INLINE uint m68ki_read_8(uint address)
@@ -1229,6 +1271,51 @@ INLINE void m68ki_jump_vector(uint vector)
  * So far I've found no problems with not calling pc_changed for 8 or 16
  * bit branches.
  */
+/* PORT: a taken backward Bcc or BRA (not DBcc, whose counter makes every
+   pass differ, and not BSR) may close a wait loop. */
+#define M68KI_LOOP_BRANCH() ((REG_IR & 0xF000) == 0x6000 && (REG_IR & 0x0F00) != 0x0100)
+
+#if defined(GWENESIS_S68K) && GWENESIS_S68K != 0
+/* PORT: the Sega CD sub CPU checks every such branch for an idle loop
+   (s68kcpu.c). */
+static void s68ki_idle_check(void);
+
+INLINE void m68ki_branch_8(uint offset)
+{
+  REG_PC += MAKE_INT_8(offset);
+  if ((offset & 0x80) && M68KI_LOOP_BRANCH())
+    s68ki_idle_check();
+}
+
+INLINE void m68ki_branch_16(uint offset)
+{
+  REG_PC += MAKE_INT_16(offset);
+  if ((offset & 0x8000) && M68KI_LOOP_BRANCH())
+    s68ki_idle_check();
+}
+#elif defined(GENESIS_SEGACD) && GENESIS_SEGACD != 0
+/* PORT: in a Sega CD session the main CPU checks its taken backward
+   branches for a wait loop too (m68kcpu.c); gwcd_m68k_idle is 0 otherwise,
+   which is all a cartridge game pays. */
+extern int gwcd_m68k_idle;
+void m68ki_idle_check(uint branch_pc);
+
+INLINE void m68ki_branch_8(uint offset)
+{
+  uint from = REG_PC;
+  REG_PC += MAKE_INT_8(offset);
+  if ((offset & 0x80) && gwcd_m68k_idle && M68KI_LOOP_BRANCH())
+    m68ki_idle_check(from - 2);
+}
+
+INLINE void m68ki_branch_16(uint offset)
+{
+  uint from = REG_PC;
+  REG_PC += MAKE_INT_16(offset);
+  if ((offset & 0x8000) && gwcd_m68k_idle && M68KI_LOOP_BRANCH())
+    m68ki_idle_check(from - 2);
+}
+#else
 INLINE void m68ki_branch_8(uint offset)
 {
   REG_PC += MAKE_INT_8(offset);
@@ -1238,6 +1325,7 @@ INLINE void m68ki_branch_16(uint offset)
 {
   REG_PC += MAKE_INT_16(offset);
 }
+#endif
 
 INLINE void m68ki_branch_32(uint offset)
 {
