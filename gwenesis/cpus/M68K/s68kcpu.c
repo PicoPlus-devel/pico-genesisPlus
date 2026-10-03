@@ -76,6 +76,14 @@
  * executed. The next run starts at the loop head with whatever changed in
  * between.
  *
+ * Both passes compared must fall in one run: a state kept from an earlier
+ * run proves nothing, the memory the loop reads may have changed since.
+ * Popful Mail's sub CPU waits for a comm command to read 0 with a MOVE.L
+ * and a CMP.L of it; the main CPU clears it, and the run that follows
+ * starts at the CMP.L with the old value still in D0. Compared with the
+ * previous run that pass looked idle, the sub CPU was parked, and it slept
+ * through the clear until the main CPU wrote its next command.
+ *
  * Skipping the run is not enough: the scheduler would start the sub CPU
  * again at the next run, a scanline later, only for it to find the same
  * loop -- 260 runs a frame of a few instructions each, which on the Pico
@@ -134,4 +142,10 @@ static void s68ki_idle_check(void)
   memcpy(s68ki_idle.regs, REG_DA, sizeof(s68ki_idle.regs));
   s68ki_idle.sr = sr;
   s68ki_idle.have = 1;
+}
+
+/* A new run (SekRunS68k, scd/cd/mcd.c): forget the last pass. */
+void s68k_idle_new_run(void)
+{
+  s68ki_idle.have = 0;
 }

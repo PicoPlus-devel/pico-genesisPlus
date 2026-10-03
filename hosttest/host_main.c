@@ -36,7 +36,10 @@ Sega CD / MD+ (port/scd.h):
     GEN_SCD_BRM=<file>          backup RAM to load and write back
     GEN_SCD_STATS=<n>           print CPU busy/idle figures every n frames
     GEN_SCD_LOG=<mask>          PicoDrive's elprintf categories (EL_* in
-                                scd/pico_int.h), e.g. 0x400000 for EL_CD
+                                scd/pico_int.h), e.g. 0x400000 for EL_CD;
+                                each frame starts with "=== frame N"
+    GEN_SCD_MAIN_IDLE=0         no main-CPU wait-loop skipping; the sub
+                                CPU's stays (-DGWCD_IDLE_SKIP=0: neither)
     GEN_MDPLUS_DISC=<disc>      run the cartridge as MD+ with this disc
     GEN_MSD_SELFTEST=1          with GEN_MDPLUS_DISC: drive the MegaSD
                                 registers through the 68000 read path,
@@ -328,6 +331,7 @@ static int msd_selftest(int frames)
 /* ---------------------------- Sega CD ------------------------------ */
 
 extern unsigned int gwcd_log_mask; /* scd/pico_int.h: elprintf() filter */
+extern int gwcd_m68k_idle;         /* port/scd.c */
 
 /* GEN_SCD_PROFILE="from:to": where the sub CPU spends its cycles between
    those frames, sampled at the end of every run slice (one or more per
@@ -1032,6 +1036,10 @@ int main(int argc, char **argv)
         gwcd_audio_tap = scd_tap;
     }
     if (scd) {
+        /* GEN_SCD_MAIN_IDLE=0: keep the sub CPU's wait-loop skipping but not
+           the main CPU's, to tell the two apart (-DGWCD_IDLE_SKIP=0: both). */
+        if (getenv("GEN_SCD_MAIN_IDLE"))
+            gwcd_m68k_idle = atoi(getenv("GEN_SCD_MAIN_IDLE"));
         gwcd_power_on();
         if (brm_path && *brm_path)
             brm_load(brm_path);
@@ -1091,6 +1099,9 @@ int main(int argc, char **argv)
             if (sscanf(v, "%d:%d", &f, &n) == 2 && f == frame)
                 gwcd_disc_change(n - 1);
         }
+
+        if (gwcd_log_mask)
+            printf("=== frame %d\n", frame); /* to place the GEN_SCD_LOG lines */
 
         int is_pal = gwenesis_frame_get_config();
         gwsnd_set_pal(is_pal);

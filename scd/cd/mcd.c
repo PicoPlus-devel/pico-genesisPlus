@@ -135,6 +135,7 @@ static void SekRunS68k(unsigned int to)
     unsigned int start = SekCycleCntS68k - cyc_do;
     s68k.cycles = 0;
     gwcd_s68k_skipped = 0;
+    s68k_idle_new_run();
     gwcd_s68k_in_run = 1;
     s68k_run(cyc_do);
     gwcd_s68k_in_run = 0;

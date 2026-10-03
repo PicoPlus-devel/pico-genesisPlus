@@ -123,7 +123,10 @@ after every CD event (`pcd_run_events`), every sub-CPU interrupt
 (`SekInterruptS68k`), every main-CPU write to the gate array
 (`gwcd_m68k_io_write8/16`), PRG-RAM or Word-RAM (`gwcd_m68k_write8/16`),
 and at the end of every frame. Loops that read the stopwatch or the PCM
-position (`gwcd_s68k_timeread`) are not parked, only skipped per run.
+position (`gwcd_s68k_timeread`) are not parked, only skipped per run. The
+sub CPU's check compares two passes of the same run only; `SekRunS68k`
+clears it (`s68k_idle_new_run`), since what the loop reads may have changed
+between runs (Popful Mail hung on its first comm-register handshake).
 
 In Sonic CD this takes the sub CPU from 100% to about 45% of its time in
 the opening video and 35% on the title screen, and the main CPU from 100%

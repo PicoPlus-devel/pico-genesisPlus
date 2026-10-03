@@ -274,6 +274,7 @@ extern m68ki_cpu_core s68k;
 /* Idle-loop detection in the sub CPU (port/scd_s68k_mem.h, s68kcpu.c) */
 extern unsigned int gwcd_s68k_sidefx;
 extern unsigned int gwcd_s68k_skipped;
+void s68k_idle_new_run(void);
 /* A sub CPU parked in a wait loop (port/scd.c): anything that could end the
    loop wakes it. */
 extern int gwcd_s68k_parked;
