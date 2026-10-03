@@ -931,7 +931,10 @@ void gwenesis_vdp_write_data_port_16(unsigned int value)
         case 0x9: // VDP FIFO TEST
             break;
         default:
-            printf("VDP Data Port invalid");
+            /* The VDP drops writes with an invalid code. Not printed: The
+               Terminator (Sega CD) clears VRAM with code $1B, a game bug,
+               and floods the console (and the Pico's stdio) with it. */
+            vdpm_log(__FUNCTION__, "invalid code %02x", code_reg);
         }
 
     /* if a DMA is scheduled, do it */

@@ -173,8 +173,13 @@ unsigned int z80_read_ctrl(unsigned int address) {
 
   if (address == 0x1100) {
 
-    z80_log(__FUNCTION__,"RUNNING = %d ", bus_ack ? 0 : 1);
-    return bus_ack == 1 ? 0 : 1;
+    /* BUSACK reads 0 (granted) only with the bus requested and the Z80 out
+       of reset; while it is held in reset it reads 1 whatever BUSREQ says
+       (PicoDrive, Genesis Plus GX). Upstream ignored reset: The Terminator
+       (Sega CD) requests the bus with the Z80 in reset and then waits for
+       this bit to read 1, and hung on a black screen. */
+    z80_log(__FUNCTION__,"RUNNING = %d ", (bus_ack && !reset) ? 0 : 1);
+    return (bus_ack == 1 && reset == 0) ? 0 : 1;
 
   } else if (address == 0x1101) {
     return 0x00;
