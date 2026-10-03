@@ -377,6 +377,19 @@ the board restarts to apply it. It is not offered on the other boards.
 >
 > The option exists for experimenting only. If you enable it, you do so entirely at your own risk.
 
+### Video Clock Fix
+
+At 378 MHz and higher the HDMI output clock is derived from the CPU clock, and some TVs and monitors then show small dots or short dotted lines in the picture. Taking the HDMI clock from the clock source of the built-in USB port avoids this, but leaves that port without a usable clock.
+
+- On HW_CONFIG 8 (Adafruit Fruit Jam) this is always done. USB controllers are connected to the second USB port on this board, so nothing is lost.
+- On the other boards with HSTX video, HW_CONFIG 2 (Pico 2 or Pimoroni Pico Plus 2 with Adafruit DVI breakout, also on the PicoNES PCB), HW_CONFIG 5 (Adafruit Metro RP2350) and HW_CONFIG 13 (Murmulator M2), the built-in USB port is the only USB port, so this is a setting: **Video Clock Fix**, in the settings menu of the rom browser, below the overclock. It is off by default.
+- Boards with PicoDVI video are not affected and do not offer the setting.
+
+> [!IMPORTANT]
+> With Video Clock Fix enabled, the built-in USB port can no longer be used for a gamepad, keyboard or mouse. Use a NES, SNES or Wii Classic controller on the GPIO controller ports instead. The port still powers the board, and USB drive mode remains available.
+
+The setting can only be enabled while a NES, SNES or Wii Classic controller is detected; otherwise an error message is shown. A SNES controller cannot be detected until a button on it has been pressed. Enabling the setting shows a warning first; confirming it restarts the board. To disable it, set it to OFF in the settings menu. If no working controller is available, delete `settings_MD.dat` from the root of the SD card on a computer: on the next start the board disables the fix and restarts once.
+
 ## Recently played games
 
 The menu remembers the last 20 games you started, most recent first. Press Button3 in the rom browser to open the list, or pick **Recently played** in the settings menu (SELECT). The settings menu route also works on controllers without a third button, such as a NES pad on the GPIO port.
