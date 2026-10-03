@@ -202,6 +202,8 @@ const int8_t g_settings_visibility_md[MOPT_COUNT] = {
     [MOPT_SPRITE_LIMIT]              = 0,  // NES only
     [MOPT_MENU_OVERSCAN]             = 0,  // Overscan in menu (menu.cpp force-shows this below the menu colors)
     [MOPT_GENESIS_PAD]               = 1,  // 3 or 6 button pad
+    [MOPT_NES_PALETTE]               = 0,  // NES only
+    [MOPT_HSTX_CLOCK_FIX]            = HSTX && !CFG_TUH_RPI_PIO_USB, // Video Clock Fix; PIO-USB builds always have it (GENESIS_OVERCLOCK_HSTX_FIX)
 };
 
 const uint8_t g_available_screen_modes_md[] = {
