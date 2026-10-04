@@ -32,7 +32,6 @@ Only RP2350 (pico 2 based boards) supported. Works best with [Adafruit Fruit Jam
 
 ## What's new
 
-- **Sega CD / Mega-CD games.** On boards with HSTX video and PSRAM, such as the Adafruit Fruit Jam, some Sega CD games now run, others still have bugs and graphical artifacts. Most are too slow to be playable. Pick the game's `.cue` file in the menu; a Sega CD BIOS is needed. See [Sega CD and MD+](https:///github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#sega-cd-and-md).
 - **MD+ games.** Cartridge games patched to play CD quality music, known as MD+, play well with their music on the same boards. Put the game and its disc image side by side with the same name and pick the disc image.
 - **Pier Solar.** *Pier Solar and the Great Architects* now plays and saves its progress, and with its *Enhanced Soundtrack Disc* and a Sega CD BIOS it plays the enhanced soundtrack.
 - **Games larger than 4 MB.** *Super Street Fighter II* now plays. It needs a board with PSRAM, or one whose flash has room for it. ([#21](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/21))
@@ -41,6 +40,7 @@ Only RP2350 (pico 2 based boards) supported. Works best with [Adafruit Fruit Jam
 - **New setting: Video Clock Fix** (Pico 2, Pimoroni Pico Plus 2, PicoNES PCB, Adafruit Metro RP2350 and Murmulator M2). Turn it on if your TV or monitor shows small dots or lines in the picture. A USB controller can then no longer be used; use a NES, SNES or Wii controller instead. On the Adafruit Fruit Jam this is always on. See [Video Clock Fix](https:///github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#video-clock-fix).
 - **6 button controllers.** Games such as *Super Street Fighter II* can now use the X, Y and Z buttons. The new **Genesis pad** setting chooses between a 3 and a 6 button controller; on **Auto**, the default, the game's cartridge decides. Some older games do not work with a 6 button controller, which is why they still get a 3 button one. ([#30](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/30))
 - **New button layout in games.** Controllers other than Genesis ones are now mapped by the position of their buttons. On a SNES controller Y, B and A are Genesis A, B and C, and L, X and R are X, Y and Z. On a NES controller SELECT, B and A are Genesis A, B and C. The menus are unchanged. See [Buttons in a game](https:///github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#buttons-in-a-game) for all controllers. ([#32](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/32), [#35](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/35))
+- **Sega CD / Mega-CD games.** On boards with HSTX video and PSRAM, such as the Adafruit Fruit Jam, some Sega CD games now run, others still have bugs and graphical artifacts. Most are too slow to be playable. Pick the game's `.cue` file in the menu; a Sega CD BIOS is needed. See [Sega CD and MD+](https:///github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#sega-cd-and-md).
 
 ## Fixes
 
