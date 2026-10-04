@@ -652,4 +652,5 @@ Gwenesis is itself built out of other people's work:
 - 6 button controller support and the position-based button layout
 - porting the Sega CD, MD+ and *Pier Solar* support from PicoDrive, with the multi-disc handling and the BIOS selection
 - the Video Clock Fix setting
+- interlace mode, for the two-player mode of *Sonic the Hedgehog 2*
 - general bug fixes, and rewrites of this readme and the changelog
