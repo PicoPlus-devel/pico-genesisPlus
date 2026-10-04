@@ -11,7 +11,7 @@
 Only RP2350 (pico 2 based boards) supported. Works best with [Adafruit Fruit Jam](https://www.adafruit.com/product/6200)
 
 
-[See the readme for how to install and wire up your board](https:///github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#getting-started)
+[See the readme for how to install and wire up your board](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#getting-started)
 
 
 > [!WARNING]  
@@ -20,7 +20,7 @@ Only RP2350 (pico 2 based boards) supported. Works best with [Adafruit Fruit Jam
 > **Only HSTX based boards like Raspberry Pi Pico 2, Pimoroni Pico Plus 2 (Both with PCB or breadboard), Adafruit Fruit Jam work on every monitor!**
 > Boards with no HSTX use the PicoDVI driver, which due to the high overclock, sets the monitor refresh rate to **77.1 Hz**.
 > Some monitors may **not support this refresh rate**, which can cause display or unsupported signal issues.  
-> This can't be lowered using PicoDVI. See [#4](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/4)
+> This can't be lowered using PicoDVI. See [#4](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/4)
 >  
 > If you experience problems, try using a **different monitor or TV**.  
 >  
@@ -34,21 +34,22 @@ Only RP2350 (pico 2 based boards) supported. Works best with [Adafruit Fruit Jam
 
 - **MD+ games.** Cartridge games patched to play CD quality music, known as MD+, play well with their music on the same boards. Put the game and its disc image side by side with the same name and pick the disc image.
 - **Pier Solar.** *Pier Solar and the Great Architects* now plays and saves its progress, and with its *Enhanced Soundtrack Disc* and a Sega CD BIOS it plays the enhanced soundtrack.
-- **Games larger than 4 MB.** *Super Street Fighter II* now plays. It needs a board with PSRAM, or one whose flash has room for it. ([#21](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/21))
-- **Games too large for PSRAM.** On a board with HSTX video, PSRAM and 16 MB of flash, such as the Adafruit Fruit Jam or a Pimoroni Pico Plus 2, games of up to about 15 MB now run, for example *Demons of Asteborg*. The first time such a game is started, the console asks before it writes the game to flash, which takes about a minute, and then restarts into the game. After that it starts in a few seconds. See [Large games](https:///github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#large-games).
-- **Optional 504 MHz overclock** on the Adafruit Fruit Jam and the Pico Plus 2, in the settings menu. It is off by default and not advised; see [Overclocking](https:///github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#overclocking).
-- **New setting: Video Clock Fix** (Pico 2, Pimoroni Pico Plus 2, PicoNES PCB, Adafruit Metro RP2350 and Murmulator M2). Turn it on if your TV or monitor shows small dots or lines in the picture. A USB controller can then no longer be used; use a NES, SNES or Wii controller instead. On the Adafruit Fruit Jam this is always on. See [Video Clock Fix](https:///github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#video-clock-fix).
-- **6 button controllers.** Games such as *Super Street Fighter II* can now use the X, Y and Z buttons. The new **Genesis pad** setting chooses between a 3 and a 6 button controller; on **Auto**, the default, the game's cartridge decides. Some older games do not work with a 6 button controller, which is why they still get a 3 button one. ([#30](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/30))
-- **New button layout in games.** Controllers other than Genesis ones are now mapped by the position of their buttons. On a SNES controller Y, B and A are Genesis A, B and C, and L, X and R are X, Y and Z. On a NES controller SELECT, B and A are Genesis A, B and C. The menus are unchanged. See [Buttons in a game](https:///github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#buttons-in-a-game) for all controllers. ([#32](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/32), [#35](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/35))
-- **Sega CD / Mega-CD games.** On boards with HSTX video and PSRAM, such as the Adafruit Fruit Jam, some Sega CD games now run, others still have bugs and graphical artifacts. Most are too slow to be playable. Pick the game's `.cue` file in the menu; a Sega CD BIOS is needed. See [Sega CD and MD+](https:///github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#sega-cd-and-md).
+- **Games larger than 4 MB.** *Super Street Fighter II* now plays. It needs a board with PSRAM, or one whose flash has room for it. ([#21](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/21))
+- **Games too large for PSRAM.** On a board with HSTX video, PSRAM and 16 MB of flash, such as the Adafruit Fruit Jam or a Pimoroni Pico Plus 2, games of up to about 15 MB now run, for example *Demons of Asteborg*. The first time such a game is started, the console asks before it writes the game to flash, which takes about a minute, and then restarts into the game. After that it starts in a few seconds. See [Large games](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#large-games).
+- **Optional 504 MHz overclock** on the Adafruit Fruit Jam, and on a Pico 2 or Pimoroni Pico Plus 2 on a breadboard or the PicoNES PCB, in the settings menu. It is off by default and not advised; see [Overclocking](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#overclocking).
+- **New setting: Video Clock Fix** (Pico 2, Pimoroni Pico Plus 2, PicoNES PCB, Adafruit Metro RP2350 and Murmulator M2). Turn it on if your TV or monitor shows small dots or lines in the picture. A USB controller can then no longer be used; use a NES, SNES or Wii controller instead. On the Adafruit Fruit Jam this is always on. See [Video Clock Fix](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#video-clock-fix).
+- **6 button controllers.** Games such as *Super Street Fighter II* can now use the X, Y and Z buttons. The new **Genesis pad** setting chooses between a 3 and a 6 button controller; on **Auto**, the default, the game's cartridge decides. Some older games do not work with a 6 button controller, which is why they still get a 3 button one. ([#30](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/30))
+- **New button layout in games.** Controllers other than Genesis ones are now mapped by the position of their buttons. On a SNES controller Y, B and A are Genesis A, B and C, and L, X and R are X, Y and Z. On a NES controller SELECT, B and A are Genesis A, B and C. The menus are unchanged. See [Buttons in a game](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#buttons-in-a-game) for all controllers. ([#32](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/32), [#35](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/35))
+- **Sega CD / Mega-CD games.** On boards with HSTX video and PSRAM, such as the Adafruit Fruit Jam, some Sega CD games now run, others still have bugs and graphical artifacts. Most are too slow to be playable. Pick the game's `.cue` file in the menu; a Sega CD BIOS is needed. Games on more than one disc change discs from the settings menu, and saved games are kept on the SD card. See [Sega CD and MD+](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#sega-cd-and-md).
 
 ## Fixes
 
 - The music of every game after the first one since the board was switched on sounded slightly off. It now sounds the same every time.
 - Fixed memory corruption in games that show a window on the left side of the screen, such as the pause menu of *Demons of Asteborg*.
-- The B button of the AliExpress SNES USB controller works without pressing Y first. ([#26](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/26))
-- A NES controller clone on the GPIO port that could not use its B button in games now has all three Genesis buttons. ([#34](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/34))
+- The B button of the AliExpress SNES USB controller works without pressing Y first. ([#26](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/26))
+- A NES controller clone on the GPIO port that could not use its B button in games now has all three Genesis buttons. ([#34](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/34))
 - In-game shortcuts such as SELECT + START also work while a game is not reading the controller.
+- The controller test now closes when SELECT + UP is held for two seconds, instead of SELECT + START, which some 8BitDo wireless controllers use for themselves.
 - The overclock setting always matches the speed the board runs at. It could show on while the board ran at the normal speed, or off while the board was still overclocked.
 - All settings return to their defaults once after updating to this version.
 
@@ -105,7 +106,7 @@ their progress, and European (PAL) games run at the speed they were made for.
   emulator does not get enough left over, so the action, the music and the sound all
   drag a little. The games are still playable, and this is not something that can be
   tuned away. See
-  [Speed on PicoDVI boards](https:///github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#speed-on-picodvi-boards)
+  [Speed on PicoDVI boards](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#speed-on-picodvi-boards)
   in the readme for the full story and the list of boards that do run at full speed.
 
 ## Sound
@@ -118,7 +119,7 @@ their progress, and European (PAL) games run at the speed they were made for.
   game.
 - **Games developed with [SGDK](https://github.com/Stephane-D/SGDK), such as
   *Xeno Crisis*, now have their sound effects and music.** This closes
-  [#11](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/11).
+  [#11](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/11).
 - Sound no longer drops out in busy scenes.
 - On HSTX boards the sound is produced on the second processor core, which leaves
   more room for the game itself.
@@ -228,7 +229,7 @@ their progress, and European (PAL) games run at the speed they were made for.
 - All three PCB designs — the PicoNES, the PicoNES Mini (Waveshare RP2350-Zero) and
   the PicoNES Micro (Waveshare RP2350-USB-A) — are attached to this release, and the
   readme has a new
-  [Custom PCBs](https:///github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#custom-pcbs)
+  [Custom PCBs](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#custom-pcbs)
   section covering mounting, parts, which binary to flash and the 3D-printed cases.
 
 ## Known limitations
@@ -237,23 +238,23 @@ their progress, and European (PAL) games run at the speed they were made for.
   *Wonder Boy in Monster World*, *NBA Jam*, *Micro Machines 2* and *Mega Man: The
   Wily Wars*. Ordinary battery-backed cartridges do save, see
   [Saved games](#saved-games) above.
-  ([#20](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/20))
+  ([#20](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/20))
 - Roms larger than 4 MB do not work: they need bank switching that is not emulated,
   so a game such as *Super Street Fighter II* breaks once it reaches past the first
   4 MB. On a board with PSRAM such a rom does fit in memory and will start.
-  ([#21](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/21))
+  ([#21](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/21))
 - Sound is mono: both sound chips are mixed into one channel that goes to the left
   and the right speaker alike, so the stereo effects in games such as *Sonic* and
   *Streets of Rage* play in the middle.
-  ([#22](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/22))
+  ([#22](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/22))
 - Games that use interlace mode are still not supported; for example the two-player
   levels of *Sonic the Hedgehog 2* show a blank screen.
-  ([#23](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/23))
+  ([#23](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/23))
 - The region comes from the rom itself. A Europe-only rom runs at 50 Hz, everything
   else at 60 Hz; there is no setting to force one or the other.
-  ([#24](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/24))
+  ([#24](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/24))
 - Non-HSTX (PicoDVI) boards still run the display at 77.1 Hz, see
-  [#4](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/4).
+  [#4](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/4).
 - Games do not run at full speed on non-HSTX (PicoDVI) boards, see
   [Performance](#performance).
 - A NES pad clone on the NES/SNES GPIO port can lose its B button. The port now tells
@@ -264,7 +265,7 @@ their progress, and European (PAL) games run at the speed they were made for.
   menu, so only the in-game B button is affected. To check a pad, open
   **Settings > Controller Test**, press a button and read the `Sent by pad:` line: a top
   digit of `F` means the pad identifies itself properly.
-  ([#28](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/28))
+  ([#28](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/28))
 
 ## For developers
 
@@ -275,7 +276,7 @@ their progress, and European (PAL) games run at the speed they were made for.
 
 # previous changes
 
-See [HISTORY.md](https:///github.com/PicoPlus-devel/pico-genesisPlus/blob/main/HISTORY.md)
+See [HISTORY.md](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/HISTORY.md)
 
 <a name="downloads___"></a>
 ## Downloads by configuration
@@ -288,35 +289,35 @@ A separate Pico 2 W binary is available for the breadboard and PicoNES PCB confi
 ### Standalone boards
 
 >[!NOTE]
-> There is no binary for the WaveShare RP2350-PiZero board. See [#7](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/7)
+> There is no binary for the WaveShare RP2350-PiZero board. See [#7](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/7)
 
 
 | Board | Binary | Readme | |
 |:--|:--|:--|:--|
-| Adafruit Metro RP2350 | [picogenesisPlus_AdafruitMetroRP2350_arm.uf2](https:///github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_AdafruitMetroRP2350_arm.uf2) | [Readme](https:///github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#adafruit-metro-rp2350) | |
-| Adafruit Fruit Jam | [picogenesisPlus_AdafruitFruitJam_arm_piousb.uf2](https:///github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_AdafruitFruitJam_arm_piousb.uf2) | [Readme](https:///github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#adafruit-fruit-jam)| |
-| Waveshare RP2350-PiZero | Unavailable [#7](https:///github.com/PicoPlus-devel/pico-genesisPlus/issues/7) | [Readme](https:///github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#waveshare-rp2040rp2350-pizero-development-board)| [3-D Printed case](https:///github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#3d-printed-case-for-rp2040rp2350-pizero) |
+| Adafruit Metro RP2350 | [picogenesisPlus_AdafruitMetroRP2350_arm.uf2](https://github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_AdafruitMetroRP2350_arm.uf2) | [Readme](https://github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#adafruit-metro-rp2350) | |
+| Adafruit Fruit Jam | [picogenesisPlus_AdafruitFruitJam_arm_piousb.uf2](https://github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_AdafruitFruitJam_arm_piousb.uf2) | [Readme](https://github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#adafruit-fruit-jam)| |
+| Waveshare RP2350-PiZero | Unavailable [#7](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/7) | [Readme](https://github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#waveshare-rp2040rp2350-pizero-development-board)| [3-D Printed case](https://github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#3d-printed-case-for-rp2040rp2350-pizero) |
 
 ### Breadboard
 
 | Board | Binary | Readme |
 |:--|:--|:--|
-| Pico 2 | [picogenesisPlus_AdafruitDVISD_pico2_arm.uf2](https:///github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_AdafruitDVISD_pico2_arm.uf2) | [Readme](https:///github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#raspberry-pi-pico-or-pico-2-setup-with-adafruit-hardware-and-breadboard) |
-| Pico 2 W (untested) | [picogenesisPlus_AdafruitDVISD_pico2_w_arm.uf2](https:///github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_AdafruitDVISD_pico2_w_arm.uf2) | [Readme](https:///github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#raspberry-pi-pico-or-pico-2-setup-with-adafruit-hardware-and-breadboard) |
-| Pimoroni Pico Plus 2 | [picogenesisPlus_AdafruitDVISD_pico2_arm.uf2](https:///github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_AdafruitDVISD_pico2_arm.uf2) | [Readme](https:///github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#raspberry-pi-pico-or-pico-2-setup-with-adafruit-hardware-and-breadboard) |
+| Pico 2 | [picogenesisPlus_AdafruitDVISD_pico2_arm.uf2](https://github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_AdafruitDVISD_pico2_arm.uf2) | [Readme](https://github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#raspberry-pi-pico-or-pico-2-setup-with-adafruit-hardware-and-breadboard) |
+| Pico 2 W (untested) | [picogenesisPlus_AdafruitDVISD_pico2_w_arm.uf2](https://github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_AdafruitDVISD_pico2_w_arm.uf2) | [Readme](https://github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#raspberry-pi-pico-or-pico-2-setup-with-adafruit-hardware-and-breadboard) |
+| Pimoroni Pico Plus 2 | [picogenesisPlus_AdafruitDVISD_pico2_arm.uf2](https://github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_AdafruitDVISD_pico2_arm.uf2) | [Readme](https://github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#raspberry-pi-pico-or-pico-2-setup-with-adafruit-hardware-and-breadboard) |
 
 
 ### PicoNES PCB
 
-Designed by John Edgar Park. See the [Custom PCBs section of the readme](https:///github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#picones-pcb).
+Designed by John Edgar Park. See the [Custom PCBs section of the readme](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#picones-pcb).
 
 | Board | Binary | Readme |
 |:--|:--|:--|
-| Pico 2 | [picogenesisPlus_AdafruitDVISD_pico2_arm.uf2](https:///github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_AdafruitDVISD_pico2_arm.uf2) | [Readme](https:///github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#pcb-with-raspberry-pi-pico-or-pico-2-and-pimoroni-pico-plus-2) |
-| Pico 2 W (untested) | [picogenesisPlus_AdafruitDVISD_pico2_w_arm.uf2](https:///github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_AdafruitDVISD_pico2_w_arm.uf2) | [Readme](https:///github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#pcb-with-raspberry-pi-pico-or-pico-2-and-pimoroni-pico-plus-2) |
-| Pimoroni Pico Plus 2 (PCB v2.6 and male headers) | [picogenesisPlus_AdafruitDVISD_pico2_arm.uf2](https:///github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_AdafruitDVISD_pico2_arm.uf2) | [Readme](https:///github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#pcb-with-raspberry-pi-pico-or-pico-2-and-pimoroni-pico-plus-2) |
+| Pico 2 | [picogenesisPlus_AdafruitDVISD_pico2_arm.uf2](https://github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_AdafruitDVISD_pico2_arm.uf2) | [Readme](https://github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#pcb-with-raspberry-pi-pico-or-pico-2-and-pimoroni-pico-plus-2) |
+| Pico 2 W (untested) | [picogenesisPlus_AdafruitDVISD_pico2_w_arm.uf2](https://github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_AdafruitDVISD_pico2_w_arm.uf2) | [Readme](https://github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#pcb-with-raspberry-pi-pico-or-pico-2-and-pimoroni-pico-plus-2) |
+| Pimoroni Pico Plus 2 (PCB v2.6 and male headers) | [picogenesisPlus_AdafruitDVISD_pico2_arm.uf2](https://github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_AdafruitDVISD_pico2_arm.uf2) | [Readme](https://github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#pcb-with-raspberry-pi-pico-or-pico-2-and-pimoroni-pico-plus-2) |
 
-PCB [pico_nesPCB_v2.6.zip](https:///github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/pico_nesPCB_v2.6.zip)
+PCB [pico_nesPCB_v2.6.zip](https://github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/pico_nesPCB_v2.6.zip)
 
 Design v2.6 has through-holes, so the Pico can be mounted on male headers. That is the only way to use a Pimoroni Pico Plus 2, which brings 8 MB of PSRAM: games then start immediately instead of after the flash copy.
 
@@ -335,26 +336,26 @@ For the latest two player PCB 2.0, you need:
 
 ### PicoNES Mini PCB (Waveshare RP2350-Zero, PCB required)
 
-Designed by Gavin Knight ([DynaMight1124](https://github.com/DynaMight1124)). See the [Custom PCBs section of the readme](https:///github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#picones-mini-pcb).
+Designed by Gavin Knight ([DynaMight1124](https://github.com/DynaMight1124)). See the [Custom PCBs section of the readme](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#picones-mini-pcb).
 
 | Board | Binary | Readme |
 |:--|:--|:--|
-| Waveshare RP2350-Zero | [picogenesisPlus_WaveShareRP2350ZeroWithPCB_arm.uf2](https:///github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_WaveShareRP2350ZeroWithPCB_arm.uf2) | [Readme](https:///github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#pcb-with-waveshare-rp2040rp2350-zero) |
+| Waveshare RP2350-Zero | [picogenesisPlus_WaveShareRP2350ZeroWithPCB_arm.uf2](https://github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_WaveShareRP2350ZeroWithPCB_arm.uf2) | [Readme](https://github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#pcb-with-waveshare-rp2040rp2350-zero) |
 
-PCB: [Gerber_PicoNES_Mini_PCB_v2.0.zip](https:///github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/Gerber_PicoNES_Mini_PCB_v2.0.zip)
+PCB: [Gerber_PicoNES_Mini_PCB_v2.0.zip](https://github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/Gerber_PicoNES_Mini_PCB_v2.0.zip)
 
 3D-printed case design, also by Gavin Knight:
 [https://www.thingiverse.com/thing:7041536](https://www.thingiverse.com/thing:7041536)
 
 ### PicoNES Micro PCB (Waveshare RP2350-USB-A)
 
-Designed by Gavin Knight ([DynaMight1124](https://github.com/DynaMight1124)). See the [Custom PCBs section of the readme](https:///github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#picones-micro-pcb).
+Designed by Gavin Knight ([DynaMight1124](https://github.com/DynaMight1124)). See the [Custom PCBs section of the readme](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#picones-micro-pcb).
 
-[Binary](https:///github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_WaveShare2350USBA_arm_piousb.uf2)
+[Binary](https://github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_WaveShare2350USBA_arm_piousb.uf2)
 
-PCB: [Gerber_PicoNES_Micro_v1.2.zip](https:///github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/Gerber_PicoNES_Micro_v1.2.zip)
+PCB: [Gerber_PicoNES_Micro_v1.2.zip](https://github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/Gerber_PicoNES_Micro_v1.2.zip)
 
-[Readme](https:///github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#pcb-with-waveshare-rp2350-usb-a)
+[Readme](https://github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#pcb-with-waveshare-rp2350-usb-a)
 
 [Build guide](https://www.instructables.com/PicoNES-RaspberryPi-Pico-Based-NES-Emulator/)
 
@@ -362,8 +363,8 @@ PCB: [Gerber_PicoNES_Micro_v1.2.zip](https:///github.com/PicoPlus-devel/pico-gen
 
 | Board | Binary | Readme |
 |:--|:--| :--|
-| Pico 2/Pico 2 w | [picogenesisPlus_PimoroniDVI_pico2_arm.uf2](https:///github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_PimoroniDVI_pico2_arm.uf2) | [Readme](https:///github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#raspberry-pi-pico-or-pico-2-setup-for-pimoroni-pico-dv-demo-base) |
-| Pimoroni Pico Plus 2 | [picogenesisPlus_PimoroniDVI_pico2_arm.uf2](https:///github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_PimoroniDVI_pico2_arm.uf2) | [Readme](https:///github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#raspberry-pi-pico-or-pico-2-setup-for-pimoroni-pico-dv-demo-base) |
+| Pico 2/Pico 2 w | [picogenesisPlus_PimoroniDVI_pico2_arm.uf2](https://github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_PimoroniDVI_pico2_arm.uf2) | [Readme](https://github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#raspberry-pi-pico-or-pico-2-setup-for-pimoroni-pico-dv-demo-base) |
+| Pimoroni Pico Plus 2 | [picogenesisPlus_PimoroniDVI_pico2_arm.uf2](https://github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_PimoroniDVI_pico2_arm.uf2) | [Readme](https://github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#raspberry-pi-pico-or-pico-2-setup-for-pimoroni-pico-dv-demo-base) |
 
 > [!NOTE]
 > On Pico W and Pico2 W, the CYW43 driver (used only for blinking the onboard LED) causes a DMA conflict with I2S audio on the Pimoroni Pico DV Demo Base, leading to emulator lock-ups. For now, no Pico W or Pico2 W binaries are provided; please use the Pico or Pico2 binaries instead.
@@ -374,27 +375,27 @@ This board has no setup section in the readme. Flash the binary below and wire t
 
 | Board | Binary |
 |:--|:--|
-| Pico 2/Pico 2 w | [picogenesisPlus_SpotpearHDMI_pico2_arm.uf2](https:///github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_SpotpearHDMI_pico2_arm.uf2) |
+| Pico 2/Pico 2 w | [picogenesisPlus_SpotpearHDMI_pico2_arm.uf2](https://github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_SpotpearHDMI_pico2_arm.uf2) |
 
 ### Murmulator M1 (Untested)
 
-For more info about the Murmulator see this website: https://murmulator.ru/ and [#150](https:///github.com/PicoPlus-devel/pico-infonesPlus/issues/150)
+For more info about the Murmulator see this website: https://murmulator.ru/ and [#150](https://github.com/PicoPlus-devel/pico-infonesPlus/issues/150)
 
 | Board | Binary |
 |:--|:--|
-| Murmulator M1 (with a Pico 2) | [picogenesisPlus_MurmulatorM1_pico2_arm.uf2](https:///github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_MurmulatorM1_pico2_arm.uf2) |
+| Murmulator M1 (with a Pico 2) | [picogenesisPlus_MurmulatorM1_pico2_arm.uf2](https://github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_MurmulatorM1_pico2_arm.uf2) |
 
 ### Murmulator M2 (untested)
 
-For more info about the Murmulator see this website: https://murmulator.ru/ and [#150](https:///github.com/PicoPlus-devel/pico-infonesPlus/issues/150)
+For more info about the Murmulator see this website: https://murmulator.ru/ and [#150](https://github.com/PicoPlus-devel/pico-infonesPlus/issues/150)
 
 | Board | Binary |
 |:--|:--|
-| Murmulator M2 | [picogenesisPlus_MurmulatorM2_arm.uf2](https:///github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_MurmulatorM2_arm.uf2) |
+| Murmulator M2 | [picogenesisPlus_MurmulatorM2_arm.uf2](https://github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_MurmulatorM2_arm.uf2) |
 
 ### Other downloads
 
-- Metadata: [GenesisPlusMetadata.zip](https:///github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/GenesisPlusMetadata.zip)
+- Metadata: [GenesisPlusMetadata.zip](https://github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/GenesisPlusMetadata.zip)
 
 
 Extract the zip file to the root folder of the SD card. Select a game in the menu and press START to show more information and box art. Works for most official released games. Screensaver shows floating random cover art.
