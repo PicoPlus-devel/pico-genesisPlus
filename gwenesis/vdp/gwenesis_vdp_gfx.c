@@ -409,8 +409,26 @@ draw_pattern_fliph_planeAoverB(uint8_t *scr, uint32_t p, uint8_t attrs) {
  *  used for sprites and planes drawing
  *
  ******************************************************************************/
+
+/* PORT: one row of a pattern (4 bytes, 8 pixels), shared by the four helpers
+   below. Interlace mode 2 (im2) has 8x16 cells: a 10-bit name, 64 bytes per
+   cell, and a vertical flip over 16 rows. im2 is a literal at every call
+   site, so the normal path folds back to upstream's code. */
 static inline __attribute__((always_inline))
-void draw_pattern_sprite(uint8_t *scr, uint16_t name, int paty) {
+unsigned int fetch_pattern_row(uint16_t name, int paty, const int im2)
+{
+  if (im2) {
+    if (name & 0x1000)
+      return *(unsigned int *)(VRAM + ((name & 0x03FF) << 6) + ((15 - paty) * 4));
+    return *(unsigned int *)(VRAM + ((name & 0x03FF) << 6) + (paty * 4));
+  }
+  if (name & 0x1000)
+    return *(unsigned int *)(VRAM + ((name & 0x07FF) << 5) + ((7 - paty) * 4)); //) pat_addr;
+  return *(unsigned int *)(VRAM + ((name & 0x07FF) << 5) + (paty * 4));
+}
+
+static inline __attribute__((always_inline))
+void draw_pattern_sprite(uint8_t *scr, uint16_t name, int paty, const int im2) {
 
   // uint16_t pat_addr = name << 5; //name * 32;
   // uint8_t pat_palette = BITS(name, 13, 2);
@@ -429,11 +447,7 @@ void draw_pattern_sprite(uint8_t *scr, uint16_t name, int paty) {
 
   // unsigned int  pattern;
 
-  // Vertical flip ?
-  if (name & 0x1000)
-    pattern = *(unsigned int *)(VRAM + ((name & 0x07FF) << 5) + ((7 - paty) * 4)); //) pat_addr;
-  else
-    pattern = *(unsigned int *)(VRAM + ((name & 0x07FF) << 5) + (paty * 4));
+  pattern = fetch_pattern_row(name, paty, im2);
 
   // Horizontal flip ?
   if (name & 0x0800)
@@ -443,7 +457,7 @@ void draw_pattern_sprite(uint8_t *scr, uint16_t name, int paty) {
 }
 
 static inline __attribute__((always_inline))
-void draw_pattern_sprite_over_planes(uint8_t *scr, uint16_t name, int paty) {
+void draw_pattern_sprite_over_planes(uint8_t *scr, uint16_t name, int paty, const int im2) {
 
   // uint16_t pat_addr = name << 5 ; //* 32;
   // int pat_palette = BITS(name, 13, 2);
@@ -463,11 +477,7 @@ void draw_pattern_sprite_over_planes(uint8_t *scr, uint16_t name, int paty) {
 
   unsigned int  pattern;
 
-  // Vertical flip ?
-  if (name & 0x1000)
-    pattern = *(unsigned int *)(VRAM + ((name & 0x07FF) << 5) + ((7 - paty) * 4)); //) pat_addr;
-  else
-    pattern = *(unsigned int *)(VRAM + ((name & 0x07FF) << 5) + (paty * 4));
+  pattern = fetch_pattern_row(name, paty, im2);
 
   // Horizontal flip ?
   if (name & 0x0800)
@@ -477,7 +487,7 @@ void draw_pattern_sprite_over_planes(uint8_t *scr, uint16_t name, int paty) {
 }
 
 static inline __attribute__((always_inline))
-void draw_pattern_planeB(uint8_t *scr, uint16_t name, int paty) {
+void draw_pattern_planeB(uint8_t *scr, uint16_t name, int paty, const int im2) {
  // uint16_t pat_addr = name  << 5; // * 32;
  // uint8_t pat_palette = BITS(name, 13, 2);
  // unsigned int is_pat_pri = name & 0x8000;
@@ -487,11 +497,7 @@ void draw_pattern_planeB(uint8_t *scr, uint16_t name, int paty) {
 
   unsigned int  pattern;
 
-  // Vertical flip ?
-  if (name & 0x1000)
-    pattern = *(unsigned int *)(VRAM + ((name & 0x07FF) << 5) + ((7 - paty) * 4)); //) pat_addr;
-  else
-    pattern = *(unsigned int *)(VRAM + ((name & 0x07FF) << 5) + (paty * 4));
+  pattern = fetch_pattern_row(name, paty, im2);
 
 //  if ((*(unsigned int *)pattern) == 0 ) return;
  // uint8_t *pattern = VRAM + ((name << 5) & 0xFFFF); //) pat_addr;
@@ -507,7 +513,7 @@ void draw_pattern_planeB(uint8_t *scr, uint16_t name, int paty) {
 }
 
 static inline __attribute__((always_inline))
-void draw_pattern_planeA(uint8_t *scr, uint16_t name, int paty) {
+void draw_pattern_planeA(uint8_t *scr, uint16_t name, int paty, const int im2) {
   // uint16_t pat_addr = name << 5; //* 32;
   // uint8_t pat_palette = BITS(name, 13, 2);
   // unsigned int is_pat_pri = name & 0x8000;
@@ -526,11 +532,7 @@ void draw_pattern_planeA(uint8_t *scr, uint16_t name, int paty) {
   // else
   //   pattern += paty * 4;
 
-  // Vertical flip ?
-  if (name & 0x1000)
-    pattern = *(unsigned int *)(VRAM + ((name & 0x07FF) << 5) + ((7 - paty) * 4)); //) pat_addr;
-  else
-    pattern = *(unsigned int *)(VRAM + ((name & 0x07FF) << 5) + (paty * 4));
+  pattern = fetch_pattern_row(name, paty, im2);
 
   // Horizontal flip ?
   if (name & 0x0800)
@@ -583,9 +585,13 @@ unsigned int get_hscroll_vram(int line)
  ******************************************************************************/
  //__attribute__((optimize("unroll-loops")))
 static inline __attribute__((always_inline))
-void GW_SRAM_FUNC(draw_line_b)(int line)
+void GW_SRAM_FUNC(draw_line_b)(int line, const int im2)
 {
   uint8_t *scr  = &render_buffer[PIX_OVERFLOW];
+
+  /* PORT: interlace mode 2. VSRAM counts lines of the 448-line picture, of
+     which a field line is every other one; the even field is always drawn. */
+  const int vline = im2 ? line << 1 : line;
 
   unsigned int ntaddr = REG4_NAMETABLE_B;
   uint16_t scrollx=FETCH16VRAM(get_hscroll_vram(line) + 2) & 0x3FF;
@@ -605,14 +611,14 @@ void GW_SRAM_FUNC(draw_line_b)(int line)
   scr -= patx;
   while (scr < end) {
     // Calculate vertical scrolling for the current line
-    uint16_t scrolly = *vsram + line;
-    uint8_t row = (scrolly >> 3) & nth_mask;
-    uint8_t paty = scrolly & 7;
+    uint16_t scrolly = *vsram + vline;
+    uint8_t row = (scrolly >> (im2 ? 4 : 3)) & nth_mask;
+    uint8_t paty = scrolly & (im2 ? 15 : 7);
 
    // unsigned int nt = ntaddr + row * (2 * ntwidth);
     unsigned int nt = ntaddr + row * ntwidth_x2;
 
-    draw_pattern_planeB(scr, FETCH16VRAM(nt + col * 2), paty);
+    draw_pattern_planeB(scr, FETCH16VRAM(nt + col * 2), paty, im2);
     col = (col + 1) & ntw_mask;
     scr += 8;
     numcell++;
@@ -629,9 +635,12 @@ void GW_SRAM_FUNC(draw_line_b)(int line)
  ******************************************************************************/
 //_attribute__((optimize("unroll-loops")))
 static inline __attribute__((always_inline))
-void GW_SRAM_FUNC(draw_line_aw)(int line) {
+void GW_SRAM_FUNC(draw_line_aw)(int line, const int im2) {
 
   uint8_t *scr  = &render_buffer[PIX_OVERFLOW];
+
+  /* PORT: interlace mode 2, as in draw_line_b(). */
+  const int vline = im2 ? line << 1 : line;
 
   unsigned int ntaddr = REG2_NAMETABLE_A;
   uint16_t scrollx=FETCH16VRAM(get_hscroll_vram(line) + 0) & 0x3FF;
@@ -680,14 +689,14 @@ void GW_SRAM_FUNC(draw_line_aw)(int line) {
   pos -= patx;
   while (pos < end) {
     // Calculate vertical scrolling for the current line
-    uint16_t scrolly = *vsram + line;
-    uint8_t row = (scrolly >> 3) & nth_mask;
-    uint8_t paty = scrolly & 7;
+    uint16_t scrolly = *vsram + vline;
+    uint8_t row = (scrolly >> (im2 ? 4 : 3)) & nth_mask;
+    uint8_t paty = scrolly & (im2 ? 15 : 7);
 
    // unsigned int nt = ntaddr + row * (2 * ntwidth);
     unsigned int nt = ntaddr + row * ntwidth_x2;
 
-    draw_pattern_planeA(pos, FETCH16VRAM(nt + col * 2), paty);
+    draw_pattern_planeA(pos, FETCH16VRAM(nt + col * 2), paty, im2);
 
     col = (col + 1) & ntw_mask;
     pos += 8;
@@ -699,8 +708,10 @@ void GW_SRAM_FUNC(draw_line_aw)(int line) {
   }
 
   // Second Draw Window Plane
+  /* PORT: in interlace mode 2 a window row (8 field lines) is one 16-row
+     cell, of which the even field shows the even rows. */
   int row = line >> 3;
-  int paty = line & 7;
+  int paty = im2 ? (line & 7) << 1 : line & 7;
   //int wdwidth = (screen_width == 320 ? 64 : 32);
   //unsigned int nt = base_w + row * 2 * wdwidth + Window_first / 4;
 
@@ -716,7 +727,7 @@ void GW_SRAM_FUNC(draw_line_aw)(int line) {
      gameplay screen, caught by ASan in hosttest). */
   uint8_t *wpos = scr + Window_first;
   for (int i = Window_first / 8; i < Window_last / 8; ++i) {
-    draw_pattern_planeA(wpos, FETCH16VRAM(nt), paty);
+    draw_pattern_planeA(wpos, FETCH16VRAM(nt), paty, im2);
     nt += 2;
     wpos += 8;
   }
@@ -730,9 +741,14 @@ void GW_SRAM_FUNC(draw_line_aw)(int line) {
 
 //__attribute__((optimize("unroll-loops")))
 static inline __attribute__((always_inline)) 
-void GW_SRAM_FUNC(draw_sprites_over_planes)(int line)
+void GW_SRAM_FUNC(draw_sprites_over_planes)(int line, const int im2)
 {
     uint8_t *scr;
+
+    /* PORT: interlace mode 2. Sprite Y counts lines of the 448-line picture
+       from 256 (not 128), cells are 16 lines high, and the even field is
+       always drawn. Overflow and masking stay per field line. */
+    const int sline = im2 ? line << 1 : line;
 
     scr = &render_buffer[PIX_OVERFLOW];
 
@@ -770,8 +786,8 @@ void GW_SRAM_FUNC(draw_sprites_over_planes)(int line)
 
         int sw = BITS(table[2], 2, 2) + 1;
 
-        sy -= 128;
-        if ((line >= sy) && (line < sy+sh*8))
+        sy -= im2 ? 256 : 128;
+        if ((sline >= sy) && (sline < sy+sh*(im2 ? 16 : 8)))
         {
             // Sprite masking: a sprite on column 0 masks
             // any lower-priority sprite, but with the following conditions
@@ -789,8 +805,8 @@ void GW_SRAM_FUNC(draw_sprites_over_planes)(int line)
             else
                 one_sprite_nonzero = true;
 
-            int row = (line - sy) >> 3;
-            int paty = (line - sy) & 7;
+            int row = (sline - sy) >> (im2 ? 4 : 3);
+            int paty = (sline - sy) & (im2 ? 15 : 7);
             if (isflipv)
                 row = sh - row - 1;
 
@@ -803,7 +819,7 @@ void GW_SRAM_FUNC(draw_sprites_over_planes)(int line)
                 name += sh * (sw - 1);
                 for (int p = 0; (p < sw) && (num_pixels < MAX_PIXELS_PER_LINE); p++) {
 
-                  draw_pattern_sprite_over_planes(scr + sx + p * 8, name, paty);
+                  draw_pattern_sprite_over_planes(scr + sx + p * 8, name, paty, im2);
                   name -= sh;
                   num_pixels += 8;
 
@@ -811,7 +827,7 @@ void GW_SRAM_FUNC(draw_sprites_over_planes)(int line)
               } else {
                 for (int p = 0; (p < sw) && (num_pixels < MAX_PIXELS_PER_LINE); p++) {
 
-                  draw_pattern_sprite_over_planes(scr + sx + p * 8, name, paty);
+                  draw_pattern_sprite_over_planes(scr + sx + p * 8, name, paty, im2);
                   name += sh;
                   num_pixels += 8;
 
@@ -838,9 +854,12 @@ void GW_SRAM_FUNC(draw_sprites_over_planes)(int line)
   //      sprite_collision = true;
 }
 static inline __attribute__((always_inline)) 
-void GW_SRAM_FUNC(draw_sprites)(int line)
+void GW_SRAM_FUNC(draw_sprites)(int line, const int im2)
 {
   uint8_t *scr;
+
+  /* PORT: interlace mode 2, as in draw_sprites_over_planes(). */
+  const int sline = im2 ? line << 1 : line;
 
   scr = &sprite_buffer[PIX_OVERFLOW];
 
@@ -876,8 +895,8 @@ void GW_SRAM_FUNC(draw_sprites)(int line)
 
     int sw = BITS(table[2], 2, 2) + 1;
 
-    sy -= 128;
-    if (line >= sy && line < sy + sh * 8) {
+    sy -= im2 ? 256 : 128;
+    if (sline >= sy && sline < sy + sh * (im2 ? 16 : 8)) {
       // Sprite masking: a sprite on column 0 masks
       // any lower-priority sprite, but with the following conditions
       //   * it only works from the second visible sprite on each line
@@ -892,8 +911,8 @@ void GW_SRAM_FUNC(draw_sprites)(int line)
       } else
         one_sprite_nonzero = true;
 
-      int row = (line - sy) >> 3;
-      int paty = (line - sy) & 7;
+      int row = (sline - sy) >> (im2 ? 4 : 3);
+      int paty = (sline - sy) & (im2 ? 15 : 7);
       if (isflipv)
         row = sh - row - 1;
 
@@ -906,14 +925,14 @@ void GW_SRAM_FUNC(draw_sprites)(int line)
           name += sh * (sw - 1);
           for (int p = 0; p < sw && num_pixels < MAX_PIXELS_PER_LINE; p++) {
 
-            draw_pattern_sprite(scr + sx + p * 8, name, paty);
+            draw_pattern_sprite(scr + sx + p * 8, name, paty, im2);
             name -= sh;
             num_pixels += 8;
           }
         } else {
           for (int p = 0; p < sw && num_pixels < MAX_PIXELS_PER_LINE; p++) {
 
-            draw_pattern_sprite(scr + sx + p * 8, name, paty);
+            draw_pattern_sprite(scr + sx + p * 8, name, paty, im2);
             name += sh;
             num_pixels += 8;
           }
@@ -1033,7 +1052,11 @@ GW_SRAM_FUNC(blit_4to5_line)(uint16_t *in, uint16_t *out) {
   }
 }
 
-void GW_SRAM_FUNC(gwenesis_vdp_render_line)(int line)
+/* PORT: upstream's gwenesis_vdp_render_line(), made an inline body so that
+   interlace mode 2 gets its own copy (im2 is a literal at both call sites);
+   see gwenesis_vdp_render_line() below. */
+static inline __attribute__((always_inline))
+void render_line(int line, const int im2)
 {
   mode_h40 = REG12_MODE_H40;
   //mode_pal = REG1_PAL;
@@ -1042,10 +1065,6 @@ void GW_SRAM_FUNC(gwenesis_vdp_render_line)(int line)
 
   //unsigned int line = scan_line;
   //  if (line == 0) gwenesis_vdp_render_config();
-
-  // interlace mode not implemented
-  if (BITS(gwenesis_vdp_regs[12], 1, 2) != 0)
-    return;
 
   if (line >= (REG1_PAL ? 240 : 224))
     return;
@@ -1099,13 +1118,13 @@ void GW_SRAM_FUNC(gwenesis_vdp_render_line)(int line)
   if (MODE_SHI)
     memset(ps, 0, 320);
 
-  draw_line_b(line);
-  draw_line_aw(line);
+  draw_line_b(line, im2);
+  draw_line_aw(line, im2);
 
   if (MODE_SHI)
-    draw_sprites(line);
+    draw_sprites(line, im2);
   else
-    draw_sprites_over_planes(line);
+    draw_sprites_over_planes(line, im2);
 
 #if GWENESIS_16BIT_RENDER
 
@@ -1296,6 +1315,32 @@ void GW_SRAM_FUNC(gwenesis_vdp_render_line)(int line)
 
 
 #endif
+}
+
+/* PORT: interlace mode 2 copy of the line renderer, out of line and in SRAM
+   (~8 KB of text). From flash it cost Sonic 2 two-player ~5% of its frame
+   budget at 378 MHz (57 fps, audio underruns): its working set competes with
+   the PSRAM ROM for the 16 KB XIP cache. */
+static void __attribute__((noinline)) GW_SRAM_FUNC(render_line_im2)(int line)
+{
+  render_line(line, 1);
+}
+
+void GW_SRAM_FUNC(gwenesis_vdp_render_line)(int line)
+{
+  /* PORT: interlace, which upstream did not draw at all (the screen froze).
+     Mode 1 (LSM 01) draws exactly like a progressive frame -- on a CRT only
+     the half-line offset of the odd field differs -- and LSM 10 is not an
+     interlaced setting. Mode 2 (LSM 11) is double resolution: a 448-line
+     picture in 8x16 cells, of which only the even field is drawn. That fits
+     the 224-line framebuffer and does not flicker, as in PicoDrive. Branching
+     here, where upstream returned, keeps the normal path's code as it was. */
+  if ((gwenesis_vdp_regs[12] & 0x06) == 0x06) {
+    render_line_im2(line);
+    return;
+  }
+
+  render_line(line, 0);
 }
 
 void gwenesis_vdp_gfx_save_state() {

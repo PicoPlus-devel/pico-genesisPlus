@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <string.h>
+#include <malloc.h> /* printSramHeadroom */
+#include <unistd.h> /* sbrk; before the core headers, which #define uint */
 #include <algorithm>
 #include "pico/stdlib.h"
 #include "hardware/divider.h"
@@ -1785,6 +1787,22 @@ static void raiseMaxRomSizeForFlash()
 }
 #endif /* HSTX */
 
+extern char __StackLimit; /* end of the heap region (linker script) */
+
+/* What the SRAM heap can still hand out: the free space inside the arena plus
+   what sbrk has not claimed yet, up to __StackLimit. dumpHeapStats' "largest"
+   (keepcost) is only the arena's top free block, so on a PSRAM board, where
+   the arena grows on demand, it leaves out everything never claimed. Printed
+   once the sound engine is up, i.e. at the game's peak. */
+static void printSramHeadroom(const char *tag)
+{
+    struct mallinfo mi = mallinfo();
+    size_t unclaimed = (size_t)(&__StackLimit - (char *)sbrk(0));
+    printf("[heap] %-14s SRAM headroom=%uK (free in arena %uK + unclaimed %uK)\n", tag,
+           (unsigned)((mi.fordblks + unclaimed) >> 10), (unsigned)(mi.fordblks >> 10),
+           (unsigned)(unclaimed >> 10));
+}
+
 #if GENESIS_SEGACD
 /* ------------------------------------------------------------------ */
 /* Sega CD / Mega-CD and MD+ (port/scd.h)                              */
@@ -2169,6 +2187,7 @@ static void runDiscGame(char *selectedRom, bool resumed)
         Frens::dumpHeapStats("cd game start");
         startAudioSinks(); /* must precede gwsnd_init */
         gwsnd_init(0 /* pal detected per frame */, HSTX);
+        printSramHeadroom("cd running");
         emulate();
         /* core1's CD-DA prefetch stops with the sound engine: after that
            nothing else reads the card, and the session's buffers may go. */
@@ -2370,6 +2389,7 @@ int main()
             Frens::dumpHeapStats("game start"); /* peak usage, both heaps */
             startAudioSinks();                  /* must precede gwsnd_init */
             gwsnd_init(0 /* pal detected per frame */, HSTX);
+            printSramHeadroom("game running");
             emulate();
             /* Covers both leaving the game and resetting it: the loop below
                re-enters and reloads the file. */

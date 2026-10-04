@@ -328,6 +328,17 @@ and the sound-seam prototypes (`gwsnd_ym_write` / `gwsnd_ym_read` /
   with `gwcd_dma_read16()` (PicoDrive's DmaSlow: Word-RAM is read one word
   late and wraps in its bank, the 1M cell image through the cell mapping).
   Cartridge DMA keeps upstream's switch.
+- Interlace layout of the HV counter's V byte (Sega manual, as in GPGX):
+  V6..V0,V7 in interlace mode 2, V7..V1,V8 in mode 1, computed by the
+  out-of-line `hvcounter_interlace_vc()` only while `REG12` bit 1 is set.
+  The counter body moved into a forced-inline `hvcounter_read()` that both
+  internal call sites use, with `gwenesis_vdp_hvcounter()` as a wrapper: with
+  the interlace test added, GCC otherwise split the counter into flash
+  (`.part.0`) and every game's HV reads paid a flash call. The interlace
+  field flag (status bit 4) needs no core change: `port/frame_loop.inc`
+  flips it in `gwenesis_vdp_status` at each vblank while interlace is on and
+  clears it otherwise, as PicoDrive does, and `gwenesis_vdp_reset()` already
+  clears it between games.
 
 ### `vdp/gwenesis_vdp_gfx.c`
 - The 16-bit renderer (upstream's Game & Watch branch) is selected under
@@ -345,14 +356,35 @@ and the sound-seam prototypes (`gwsnd_ym_write` / `gwsnd_ym_read` /
   the end of `render_buffer`, over the globals that follow it. It now starts
   at `Window_first`. Found by ASan on Demons of Asteborg's pause screen; none
   of the other test ROMs use a left window, and their output is unchanged.
+- **Interlace** (upstream returned early, so the screen froze). Mode 1 and
+  the non-interlaced `LSM 10` setting draw as a progressive frame. Mode 2
+  (`LSM 11`, double resolution) draws the even field of its 448-line picture
+  into the 224-line framebuffer, as PicoDrive does: stable, no flicker, but
+  details on odd lines are not shown. The mode-2 arithmetic is a
+  `const int im2` parameter on the plane, sprite and pattern helpers
+  (`fetch_pattern_row()`: 64-byte 8x16 cells, 10-bit name, vertical flip over
+  16 rows; VSRAM and sprite Y in 448-line units, sprite Y offset 256). It is
+  always a literal, so the normal path folds back to upstream's arithmetic.
+  Upstream's `gwenesis_vdp_render_line()` body became the inline
+  `render_line(line, im2)`. The new `gwenesis_vdp_render_line()` branches
+  where upstream returned: mode 2 goes to `render_line_im2()`, a second,
+  out-of-line copy, also in SRAM (`GW_SRAM_FUNC`, ~8.3 KB of text). From
+  flash it was measured on a Fruit Jam at 378 MHz: Sonic 2 two-player ran at
+  57 fps with audio underruns (fine at 504 MHz), because its working set
+  competes with the PSRAM ROM for the 16 KB XIP cache. Net cost +8.5 KB SRAM
+  text (the mode-2 copy, plus ~190 B of register-allocation change in the
+  normal copy and the HV counter above); bss unchanged; output of every
+  non-interlaced test ROM byte-identical.
 - `GW_SRAM_FUNC` on `gwenesis_vdp_render_line`, `draw_line_b`,
   `draw_line_aw`, `draw_sprites`, `draw_sprites_over_planes`,
-  `blit_4to5_line`.
+  `blit_4to5_line` (the four helpers are inlined into the two renderers, so
+  only those and `blit_4to5_line` are placed), and on `render_line_im2`.
 
 ## Known limitations (unchanged from upstream)
 
-- Interlace mode unimplemented (`gwenesis_vdp_render_line` returns —
-  Sonic 2 two-player is blank).
+- Interlace mode 2 shows only the even field (see `vdp/gwenesis_vdp_gfx.c`
+  above). Neither field alternation nor blending is offered: the framebuffer
+  has room for one 224-line field only.
 - ROM bank switching (`port/gwmapper.h`) switches 512 KB pages, so a 32-bit
   read of the last word of a remapped page takes its low half from whatever
   follows that bank in memory rather than from the next page. Splitting

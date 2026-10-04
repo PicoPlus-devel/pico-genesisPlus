@@ -249,8 +249,21 @@ int gwenesis_vdp_vcounter()
  *  Process SEGA 315-5313 HVCOUNTER based on HCOUNTER and VCOUNTER
  *
  ******************************************************************************/
-//static inline __attribute__((always_inline))
-unsigned short gwenesis_vdp_hvcounter()
+/* PORT: interlace layout of the V byte (Sega manual, as in GPGX). Mode 2
+   counts the 448-line picture: V6..V0 then V7. Mode 1 shows V7..V1 then V8.
+   vcounter() leaves out bit 8 after the counter jump, which is exactly where
+   it stops returning scan_line. Out of line, and the counter itself is
+   forced inline below: with this added, GCC otherwise splits the counter
+   into flash, which would cost every game's HV counter reads a flash call. */
+static int __attribute__((noinline)) hvcounter_interlace_vc(int vc)
+{
+    if ((gwenesis_vdp_regs[12] & 6) == 6)
+        return (vc << 1) | ((vc >> 7) & 1);
+    return (vc & ~1) | ((vc >= 0x100) || (vc != scan_line));
+}
+
+static inline __attribute__((always_inline))
+unsigned short hvcounter_read(void)
 {
     /* H/V Counter */
     if (hvcounter_latched == 1)
@@ -261,8 +274,16 @@ unsigned short gwenesis_vdp_hvcounter()
     assert(vc < 512);
     assert(hc < 512);
 
+    if (gwenesis_vdp_regs[12] & 2)
+        vc = hvcounter_interlace_vc(vc);
+
     return ((vc & 0xFF) << 8) | (hc >> 1);
 
+}
+
+unsigned short gwenesis_vdp_hvcounter()
+{
+    return hvcounter_read();
 }
 
 //static inline __attribute__((always_inline))
@@ -309,7 +330,7 @@ static inline __attribute__((always_inline)) void gwenesis_vdp_register_w(int re
 
         if (REG0_HVLATCH && (hvcounter_latched == 0))
         {
-            hvcounter_latch = gwenesis_vdp_hvcounter();
+            hvcounter_latch = hvcounter_read();
             hvcounter_latched = 1;
            //printf("HVcounter latched:%x\n",hvcounter_latch);
         }
@@ -995,7 +1016,7 @@ unsigned int GW_SRAM_FUNC(gwenesis_vdp_read_memory_16)(unsigned int address)
     else if (address < 0x8)
       return status_register_r();
     else if (address < 0xf)
-      return gwenesis_vdp_hvcounter();
+      return hvcounter_read();
     else 
       return 0xff;
 

@@ -129,6 +129,15 @@ static void gwenesis_frame_run(int draw_frame)
                 m68k_set_irq(6);
             }
             z80_irq_line(1);
+
+            /* Interlace field flag (status bit 4): flips at every vblank
+               while either interlace mode is on and reads 0 otherwise, as in
+               PicoDrive. Only games see it -- the renderer always draws the
+               even field. gwenesis_vdp_reset() clears it between games. */
+            if (gwenesis_vdp_regs[12] & 2)
+                gwenesis_vdp_status ^= STATUS_ODDFRAME;
+            else
+                gwenesis_vdp_status &= ~STATUS_ODDFRAME;
         }
         if (scan_line == (screen_height + 1))
             z80_irq_line(0);
