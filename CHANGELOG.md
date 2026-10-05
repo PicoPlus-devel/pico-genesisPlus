@@ -1,6 +1,6 @@
 # CHANGELOG
 
-**v0.17** plays **MD+** games on the Adafruit Fruit Jam and similar boards, and games larger than 4 MB, such as **Super Street Fighter II**, even ones too large for PSRAM, such as *Demons of Asteborg*. It also adds **6 button controller** support. Some **Sega CD / Mega-CD** games run as well, others still have bugs and graphical artifacts. Most are too slow to be playable.
+**v0.18** adds the **Olimex RP2040-PICO-PC** with a Raspberry Pi Pico 2 to the supported boards.
 
 
 # General Info
@@ -28,7 +28,19 @@ Only RP2350 (pico 2 based boards) supported. Works best with [Adafruit Fruit Jam
 >
 > Games also **run slower** on PicoDVI boards. See [Speed on PicoDVI boards](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#speed-on-picodvi-boards).
 
+# v0.18 Release notes
+
+## What's new
+
+- **Olimex RP2040-PICO-PC.** The emulator now runs on the [Olimex RP2040-PICO-PC](https://www.olimex.com/Products/MicroPython/PICO/RP2040-PICO-PC/) with a Raspberry Pi Pico 2: a 60 Hz HDMI picture, sound through HDMI and the board's audio jack at the same time, USB controllers on the USB-A port and a NES or SNES controller on the UEXT connector. See [Olimex RP2040-PICO-PC](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#olimex-rp2040-pico-pc). Contributed by [DnCraptor](https://github.com/DnCraptor).
+
+## Fixes
+
+- When started from [pico-bootLoader](https://github.com/PicoPlus-devel/pico-bootLoader) on a board without PSRAM, a game too large for the flash could still be picked, and writing it to flash could overwrite the bootloader.
+
 # v0.17 Release notes
+
+**v0.17** plays **MD+** games on the Adafruit Fruit Jam and similar boards, and games larger than 4 MB, such as **Super Street Fighter II**, even ones too large for PSRAM, such as *Demons of Asteborg*. It also adds **6 button controller** support. Some **Sega CD / Mega-CD** games run as well, others still have bugs and graphical artifacts. Most are too slow to be playable.
 
 ## What's new
 
@@ -95,7 +107,7 @@ See [HISTORY.md](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/HI
 
 Binaries for each configuration are listed below. Only RP2350 (Pico 2) boards are supported, and there are no risc-v binaries available.
 
-A separate Pico 2 W binary is available for the breadboard and PicoNES PCB configuration. For the other configurations, use the Pico 2 binary on a Pico 2 W as well — the only thing you lose is the blinking led.
+A separate Pico 2 W binary is available for the breadboard and PicoNES PCB configuration. For the other configurations, use the Pico 2 binary on a Pico 2 W as well — the only thing you lose is the blinking led. The exception is the Olimex RP2040-PICO-PC, which has a binary for the Pico 2 only.
 
 
 ### Standalone boards
@@ -204,6 +216,16 @@ For more info about the Murmulator see this website: https://murmulator.ru/ and 
 | Board | Binary |
 |:--|:--|
 | Murmulator M2 | [picogenesisPlus_MurmulatorM2_arm.uf2](https://github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_MurmulatorM2_arm.uf2) |
+
+### Olimex RP2040-PICO-PC
+
+Contributed by [DnCraptor](https://github.com/DnCraptor). See the [Olimex RP2040-PICO-PC section of the readme](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#olimex-rp2040-pico-pc).
+
+| Board | Binary |
+|:--|:--|
+| Olimex RP2040-PICO-PC with a Pico 2 | [picogenesisPlus_OlimexPicoPC_arm.uf2](https://github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_OlimexPicoPC_arm.uf2) |
+
+There is no Pico 2 W binary for this board.
 
 ### Other downloads
 
