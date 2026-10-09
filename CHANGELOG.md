@@ -1,6 +1,6 @@
 # CHANGELOG
 
-**v0.18** adds the **Olimex RP2040-PICO-PC** with a Raspberry Pi Pico 2 to the supported boards.
+**v0.19** changes the button layout in games for controllers other than Genesis ones.
 
 
 # General Info
@@ -27,6 +27,16 @@ Only RP2350 (pico 2 based boards) supported. Works best with [Adafruit Fruit Jam
 > **Note:** This limitation does **not** apply to **HSTX-based boards** (e.g., *Adafruit Fruit Jam*), where the monitor refresh rate can be set to **60 Hz**.
 >
 > Games also **run slower** on PicoDVI boards. See [Speed on PicoDVI boards](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#speed-on-picodvi-boards).
+
+# v0.19 Release notes
+
+## Changes
+
+- **New button layout in games.** On controllers other than Genesis ones, Genesis B and C are now on the buttons most games use to attack and jump. On a SNES controller A, Y and B are Genesis A, B and C; on an XInput controller B, X and A; on a Dual Shock/Sense Circle, Square and Cross. NES controllers keep SELECT, B and A as Genesis A, B and C. X, Y and Z and the menus are unchanged. See [Buttons in a game](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#buttons-in-a-game). ([#40](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/40))
+
+## Fixes
+
+- A NES controller clone on the GPIO port that is not recognised as a NES controller now has its buttons in the same places as any other NES controller. ([#28](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/28))
 
 # v0.18 Release notes
 

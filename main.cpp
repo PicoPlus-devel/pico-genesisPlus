@@ -599,11 +599,11 @@ void toggleScreenMode()
 #endif
 }
 
-/* SELECT doubles as a Genesis button on pads that are one short: as A on a
-   NES pad (it has only B and A, which play Genesis B and C), and as C on a GPIO
-   pad that has not identified itself (see nesPadButtons()). The menu is
-   unaffected, it reads the pads through its own code and keeps SELECT for
-   itself.
+/* SELECT doubles as Genesis A for NES pads, which have only B and A for
+   Genesis B and C. That covers every pad on the GPIO port, since a NES pad
+   that does not identify itself is read as a SNES one (see nesPadButtons());
+   on a real SNES pad it only repeats SNES A. The menu is unaffected, it reads
+   the pads through its own code and keeps SELECT for itself.
 
    The SELECT bit is deliberately left in place, so every in-game SELECT+...
    hotkey keeps working. The button is only withheld while START is held down,
@@ -614,23 +614,23 @@ static inline int selectDoublesAs(int bits, int button)
 }
 
 /* In-game layout. Genesis pads are used as they are. Every other pad maps by
-   position, the way Genesis Plus GX does: the SNES layout's Y B A play Genesis
-   A B C and L X R play X Y Z, and the other pads follow from which of their
-   buttons sit where SNES Y B A X L R do (XInput X A B Y LB RB, PlayStation
-   Square Cross Circle Triangle L1 R1). NES pads have only B and A for Genesis
-   B and C, with SELECT as A. */
+   position: SNES A Y B play Genesis A B C, which puts Genesis B and C, the
+   usual attack and jump buttons, on SNES Y and B (#40). L X R play X Y Z. The
+   other pads follow from which of their buttons sit where SNES A Y B X L R do
+   (XInput B X A Y LB RB, PlayStation Circle Square Cross Triangle L1 R1). NES
+   pads have only B and A for Genesis B and C, with SELECT as A. */
 
 /* Wii Classic and SNES Classic pads, wiipad_read() layout: bit0=A 1=B
    2=Select 3=Start 4-7=d-pad 8=X 9=Y 10=L 11=R. */
 static inline int mapWiipadButtons(uint16_t w)
 {
     int v = w & (SELECT | START | UP | DOWN | LEFT | RIGHT);
-    if (w & (1u << 9))
-        v |= A; // Y
-    if (w & (1u << 1))
-        v |= B | HOT1; // B
     if (w & (1u << 0))
-        v |= C; // A
+        v |= A; // A
+    if (w & (1u << 9))
+        v |= B; // Y
+    if (w & (1u << 1))
+        v |= C | HOT1; // B
     if (w & (1u << 10))
         v |= X; // L
     if (w & (1u << 8))
@@ -682,7 +682,7 @@ static int mapUsbButtons(const io::GamePadState &gp)
     }
     else
     {
-        v |= (b & Btn::Y ? A : 0) | (b & Btn::A ? B : 0) | (b & Btn::B ? C : 0) |
+        v |= (b & Btn::B ? A : 0) | (b & Btn::Y ? B : 0) | (b & Btn::A ? C : 0) |
              (b & Btn::L ? X : 0) | (b & Btn::X ? Y : 0) | (b & Btn::R ? Z : 0);
     }
     return v;
@@ -697,46 +697,34 @@ static int mapUsbButtons(const io::GamePadState &gp)
    same thing on both and already sit on the constants above, so they pass
    straight through as a mask.
 
-   Bits 0 and 1 are the two that swap meaning, so they need to know which pad
-   is on the wire. Only a NES pad can say so: it grounds the shift register's
-   unused outputs, which the driver sees as the ID nibble on every single read,
-   so NESPAD_TYPE_NES is not a guess and needs no button press first. It plays
-   NES B = Genesis B, NES A = C and SELECT = A.
+   Bits 0 and 1 swap meaning, but the layout makes that harmless: bit1 (NES B,
+   SNES Y) plays Genesis B and bit0 (NES A, SNES B) plays C on either pad, and
+   SNES A X L R sit on bits 8-11, which a NES pad never sets. So every NES pad
+   plays SELECT B A as Genesis A B C, including an aftermarket one that leaves
+   the shift register's unused outputs floating and so cannot be told from a
+   SNES pad (#28, #34).
 
-   Anything else gets the SNES layout, which is what a SNES pad (idle or not)
-   and an 8-bit SNES->NES adapter cable both need. It also covers an
-   aftermarket NES pad that leaves those outputs floating and so cannot be
-   recognised: there bit0 is NES A and bit1 NES B, which the SNES layout
-   plays as Genesis B and A, and SELECT doubles as C, so all three buttons
-   stay in reach (#28, #34). */
+   Only Button1 depends on which pad is on the wire: it is whatever the menu
+   treats as "back", B on a proven SNES pad and bit1 (NES B, or SNES Y on an
+   idle SNES pad) until then. */
 static inline int nesPadButtons(int pad)
 {
     const uint16_t ext = nespad_states_ext[pad];
-    const uint8_t type = nespad_padtype[pad];
+    const bool snes = nespad_padtype[pad] == NESPAD_TYPE_SNES;
     int v = ext & (SELECT | START | UP | DOWN | LEFT | RIGHT); // same bits on both pads
-    if (type == NESPAD_TYPE_NES)
-    {
-        if (ext & (1u << 1))
-            v |= B | HOT1; // NES B
-        if (ext & (1u << 0))
-            v |= C; // NES A
-        return selectDoublesAs(v, A);
-    }
-    // Button1 is whatever the menu treats as "back": B on a proven SNES pad,
-    // bit1 (NES B, or SNES Y on an idle SNES pad) until then.
     if (ext & (1u << 1))
-        v |= A | (type == NESPAD_TYPE_SNES ? 0 : HOT1); // SNES Y
+        v |= B | (snes ? 0 : HOT1); // NES B, SNES Y
     if (ext & (1u << 0))
-        v |= B | (type == NESPAD_TYPE_SNES ? HOT1 : 0); // SNES B
+        v |= C | (snes ? HOT1 : 0); // NES A, SNES B
     if (ext & (1u << 8))
-        v |= C; // SNES A
+        v |= A; // SNES A
     if (ext & (1u << 10))
         v |= X; // SNES L
     if (ext & (1u << 9))
         v |= Y; // SNES X
     if (ext & (1u << 11))
         v |= Z; // SNES R
-    return selectDoublesAs(v, C);
+    return selectDoublesAs(v, A);
 }
 #endif
 

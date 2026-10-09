@@ -302,13 +302,13 @@ The menus use three buttons, called Button1, Button2 and Button3 throughout this
 
 ### Buttons in a game
 
-Genesis controllers are used as they are. Every other controller is mapped by the position of its buttons: Genesis A, B and C are the left, bottom and right face buttons, and Genesis X, Y and Z are the left shoulder button, the top face button and the right shoulder button.
+Genesis controllers are used as they are. Every other controller is mapped by the position of its buttons: Genesis A, B and C are the right, left and bottom face buttons, and Genesis X, Y and Z are the left shoulder button, the top face button and the right shoulder button. Most games attack with B and jump with C, so these land on the buttons that do the same in most SNES games. ([#40](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/40))
 
 | Genesis | Genesis Mini 2, Retro-Bit Arcade Pad | SNES, Wii Classic | NES | XInput | Dual Shock/Sense | Keyboard |
 | ------- | ------------------------------------ | ----------------- | --- | ------ | ---------------- | -------- |
-| A       | A | Y | Select | X  | Square   | Z |
-| B       | B | B | B      | A  | Cross    | X |
-| C       | C | A | A      | B  | Circle   | C |
+| A       | A | A | Select | B  | Circle   | Z |
+| B       | B | Y | B      | X  | Square   | X |
+| C       | C | B | A      | A  | Cross    | C |
 | X       | X | L | –      | LB | L1       | Q |
 | Y       | Y | X | –      | Y  | Triangle | W |
 | Z       | Z | R | –      | RB | R1       | E |
@@ -335,9 +335,9 @@ Choose **6 button** for a game that supports six buttons without saying so in it
 
 ### NES and SNES pads on the GPIO port
 
-The two sockets speak one protocol but the pads send their buttons in a different order, so the port works out for itself which one is plugged in. A NES pad says so on every read, and anything else is taken for a SNES pad — including a SNES pad behind a home-made adapter cable, which works fully from the first button press with no need to wake it up first. Both then get the mapping from the [table above](#buttons-in-a-game). On a SNES pad on this port SELECT also acts as Genesis C, for the reason below.
+The two sockets speak one protocol but the pads send their buttons in a different order, so the port works out for itself which one is plugged in. A NES pad says so on every read, and anything else is taken for a SNES pad — including a SNES pad behind a home-made adapter cable, which works fully from the first button press with no need to wake it up first. Both then get the mapping from the [table above](#buttons-in-a-game). On a SNES pad on this port SELECT also acts as Genesis A, for the reason below.
 
-One caveat: a NES pad is recognised by grounding the shift register outputs it does not use, which is what an original Nintendo pad does, and most aftermarket ones with it. A clone that leaves them floating cannot be told from a SNES pad. It keeps all three Genesis buttons, but in other places: B is Genesis A, A is Genesis B and SELECT is Genesis C. To check a pad, open **Settings > Controller Test**, press a button and look at the `Sent by pad:` line — a top digit of `F` means the pad identifies itself properly. ([#28](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/28), [#34](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/34))
+A NES pad is recognised by grounding the shift register outputs it does not use, which is what an original Nintendo pad does, and most aftermarket ones with it. A clone that leaves them floating cannot be told from a SNES pad, but it plays the same as any other NES pad: SELECT, B and A are Genesis A, B and C. ([#28](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/28), [#34](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/34))
 
 ## Menu
 
@@ -539,7 +539,6 @@ Download the metadata pack from the [releases page](https://github.com/PicoPlus-
 - **Games run slower on PicoDVI boards.** Boards without HSTX cannot keep up with full speed, see [Speed on PicoDVI boards](#speed-on-picodvi-boards).
 - **Mega Drive roms and Sega CD discs only.** Files that are neither are refused with a message instead of starting the emulator on whatever the file happens to contain.
 - **Sega CD games run too slow.** Some games run, others still have bugs and graphical artifacts. Most are too slow to be playable. MD+ games are not affected. Disc images need a board with HSTX video and PSRAM, and only `.cue`/`.bin` images are supported, not `.chd`. There is no support for the backup RAM cartridge or for CD+G.
-- **A NES pad clone on the GPIO port may get a different button layout.** The port tells NES and SNES pads apart by the shift register outputs a NES pad does not use, which an original Nintendo pad grounds. A clone that leaves them floating is taken for a SNES pad: all three Genesis buttons still work, but B is Genesis A, A is Genesis B and SELECT is Genesis C. See [NES and SNES pads on the GPIO port](#nes-and-snes-pads-on-the-gpio-port). ([#28](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/28))
 
 ## For developers
 
