@@ -1626,9 +1626,14 @@ static size_t romHeadLen = 0;
 /* A ROM-to-flash write ends in a reboot: an erase holds interrupts off for
    hundreds of milliseconds at a time, which a PIO USB host does not survive.
    This marker in watchdog scratch[5] picks the cart straight back up after
-   it, so the user still only chose it once. [4] is clobbered by
-   watchdog_reboot, [6]/[7] are the bootloader handshake (FrensHelpers.cpp),
-   which also means a bootloader build resumes into this emulator. */
+   it, so the user still only chose it once. [4] holds the SDK's
+   watchdog_enable magic, [6]/[7] are the bootloader handshake
+   (FrensHelpers.cpp). The reboot is a watchdog_enable(), not a
+   watchdog_reboot(): pico-bootLoader jumps straight back into the resident
+   application only after a watchdog_enable reboot, and shows its menu after
+   any other. The other effect of that magic, initAll() flashing the rom
+   named in ROMINFOFILE, needs a board without PSRAM, and this path needs
+   PSRAM. */
 static constexpr int GEN_RESUME_SCRATCH = 5;
 static constexpr uint32_t GEN_RESUME_MAGIC = 0x6E5F1A54u;
 
@@ -1734,7 +1739,7 @@ static uintptr_t prepareOversizeRom(const char *path, size_t romSize, bool resum
         }
         printf("romflash: rebooting to restore USB, then resuming\n");
         watchdog_hw->scratch[GEN_RESUME_SCRATCH] = GEN_RESUME_MAGIC;
-        watchdog_reboot(0, 0, 0);
+        watchdog_enable(1, 1);
         while (true)
             tight_loop_contents();
     }

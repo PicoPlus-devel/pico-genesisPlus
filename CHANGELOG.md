@@ -37,6 +37,7 @@ Only RP2350 (pico 2 based boards) supported. Works best with [Adafruit Fruit Jam
 ## Fixes
 
 - A NES controller clone on the GPIO port that is not recognised as a NES controller now has its buttons in the same places as any other NES controller. ([#28](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/28))
+- When started from [pico-bootLoader](https://github.com/PicoPlus-devel/pico-bootLoader), a game too large for PSRAM no longer returns to the bootloader menu after it has been written to flash. The console restarts straight into the game, as it does without the bootloader.
 
 # v0.18 Release notes
 
