@@ -137,23 +137,24 @@ static uint16_t wiipad_raw_cached = 0;
  * Tested core clocks:
  *   340000 kHz: Video OK, TinyUSB unstable (PIO USB still works)
  *   378000 kHz: Stable; allows exact 126 MHz HSTX pixel clock for 60.00 Hz output
+ *   384000 kHz: Default. 8 x 48 MHz, so USB runs from PLL_SYS and PLL_USB is
+ *               the 126 MHz HSTX clock: no dots on strict displays, and the
+ *               built-in USB port keeps working (pico_shared setClocksAndStartStdio).
  *
- * At both tested values the HSTX (serial video) clock can be tuned so display refresh stays 60 Hz.
+ * At these values the HSTX (serial video) clock can be tuned so display refresh stays 60 Hz.
  * Debug quirk: At 378 MHz a hard fault (signal trap) may occur when starting a debug session.
  * Mitigation: Enter BOOTSEL mode before attaching the debugger at 378 MHz.
  *
- * Voltage: 1.50 V, matching the FlashParams overclock limits
- * (pico_shared/FlashParams.cpp pairs 378000 kHz with VREG_VOLTAGE_1_50).
+ * Voltage: 1.50 V, as FlashParams.cpp pairs with 378000 kHz for the other emulators.
  */
-#define EMULATOR_CLOCKFREQ_KHZ 378000 //  Overclock frequency in kHz when using HSTX
-                                      // May cause artifacts on some screens, 336000 seems stable
-                                      // https://github.com/PicoPlus-devel/retroJam/issues/7
+#define EMULATOR_CLOCKFREQ_KHZ 384000 //  Overclock frequency in kHz when using HSTX
 #define VOLTAGE VREG_VOLTAGE_1_50
 /* Optional overclock, as in pico_snesPlus: the "Run CPU at high clock"
  * setting (Fruit Jam and Pico Plus 2 only) reboots into 504 MHz. 1.70 V is
  * what 504 MHz needs to stay stable; 1.60-1.65 V runs but may hard-fault in
- * heavy scenes. 504 / 4 is the same 126 MHz HSTX pixel clock, and
- * pico_shared slows the flash interface to match. Off by default. */
+ * heavy scenes. 504 / 4 is the same 126 MHz HSTX pixel clock, an even divider
+ * and therefore free of the dots 378 / 3 gives, and pico_shared slows the
+ * flash interface to match. Off by default. */
 #define EMULATOR_MAX_CLOCKFREQ_KHZ 504000
 #define MAX_VOLTAGE VREG_VOLTAGE_1_70
 #define OVERCLOCK_SETTING (HW_CONFIG == 2 || HW_CONFIG == 8)
@@ -205,7 +206,7 @@ const int8_t g_settings_visibility_md[MOPT_COUNT] = {
     [MOPT_MENU_OVERSCAN]             = 0,  // Overscan in menu (menu.cpp force-shows this below the menu colors)
     [MOPT_GENESIS_PAD]               = 1,  // 3 or 6 button pad
     [MOPT_NES_PALETTE]               = 0,  // NES only
-    [MOPT_HSTX_CLOCK_FIX]            = HSTX && !CFG_TUH_RPI_PIO_USB, // Video Clock Fix; PIO-USB builds always have it (GENESIS_OVERCLOCK_HSTX_FIX)
+    [MOPT_HSTX_CLOCK_FIX]            = 0,  // Video Clock Fix: not needed. 384 MHz puts HSTX on PLL_USB for free, 504 MHz derives it from clk_sys / 4, which is clean
 };
 
 const uint8_t g_available_screen_modes_md[] = {
@@ -2218,7 +2219,7 @@ int main()
     char selectedRom[FF_MAX_LFN];
     romName = selectedRom;
     ErrorMessage[0] = selectedRom[0] = 0;
-    // This emulator is always overclocked at 378 Mhz or higher. Where the
+    // This emulator is always overclocked at 384 Mhz or higher. Where the
     // overclock setting exists, the settings menu stores the chosen clock in
     // FlashParams and reboots; pick it up here.
     vreg_voltage voltage = VOLTAGE;

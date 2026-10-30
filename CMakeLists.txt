@@ -187,10 +187,11 @@ target_compile_definitions(${projectname} PUBLIC
     GPIOHSTXINVERTED=${GPIOHSTXINVERTED} # Set to 1 if HSTX pins are inverted: D- = D+ -1
     ENABLE_VU_METER=${ENABLE_VU_METER} # Enable VU meter (fruitjam NeoPixel leds)
     ENABLEDVI=1
-    # Route clk_hstx from PLL_USB at 378 MHz overclock so PLL_SYS jitter no longer
-    # closes the TMDS eye-pattern (dots/dotted lines on strict HDMI receivers).
-    # FrensHelpers::setClocksAndStartStdio only honors this when PIO-USB is in use
-    # (PLL_USB must stay at 48 MHz for native TinyUSB).
+    # PIO-USB builds only: route clk_hstx from PLL_USB at every clock. At the
+    # default 384 MHz FrensHelpers::setClocksAndStartStdio does that by itself,
+    # with USB on PLL_SYS. At the 504 MHz overclock it is not needed for the
+    # picture (504 / 4 from clk_sys is clean, unlike 378 / 3), and it means USB
+    # drive mode has to borrow PLL_USB back.
     GENESIS_OVERCLOCK_HSTX_FIX=1
     PICO_FLASH_SIZE_BYTES=16777216  # Real size determined at runtime.
 )
