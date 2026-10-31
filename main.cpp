@@ -145,7 +145,8 @@ static uint16_t wiipad_raw_cached = 0;
  * Debug quirk: At 378 MHz a hard fault (signal trap) may occur when starting a debug session.
  * Mitigation: Enter BOOTSEL mode before attaching the debugger at 378 MHz.
  *
- * Voltage: 1.50 V, as FlashParams.cpp pairs with 378000 kHz for the other emulators.
+ * Voltage: 1.50 V, matching the FlashParams overclock limits
+ * (pico_shared/FlashParams.cpp pairs 384000 kHz with VREG_VOLTAGE_1_50).
  */
 #define EMULATOR_CLOCKFREQ_KHZ 384000 //  Overclock frequency in kHz when using HSTX
 #define VOLTAGE VREG_VOLTAGE_1_50
@@ -206,7 +207,6 @@ const int8_t g_settings_visibility_md[MOPT_COUNT] = {
     [MOPT_MENU_OVERSCAN]             = 0,  // Overscan in menu (menu.cpp force-shows this below the menu colors)
     [MOPT_GENESIS_PAD]               = 1,  // 3 or 6 button pad
     [MOPT_NES_PALETTE]               = 0,  // NES only
-    [MOPT_HSTX_CLOCK_FIX]            = 0,  // Video Clock Fix: not needed. 384 MHz puts HSTX on PLL_USB for free, 504 MHz derives it from clk_sys / 4, which is clean
 };
 
 const uint8_t g_available_screen_modes_md[] = {

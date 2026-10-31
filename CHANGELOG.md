@@ -1,6 +1,6 @@
 # CHANGELOG
 
-**v0.19.2** finds USB controllers at every start on the Adafruit Fruit Jam and other boards with PIO-USB.
+**v0.20** removes the small dots or lines some TVs and monitors showed in the picture, while the built-in USB port keeps working, and finds USB controllers at every start on the Adafruit Fruit Jam and other boards with PIO-USB.
 
 
 # General Info
@@ -28,10 +28,16 @@ Only RP2350 (pico 2 based boards) supported. Works best with [Adafruit Fruit Jam
 >
 > Games also **run slower** on PicoDVI boards. See [Speed on PicoDVI boards](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#speed-on-picodvi-boards).
 
-# v0.19.2 Release notes
+# v0.20 Release notes
+
+## Changes
+
+- **The Video Clock Fix setting has been removed.** It is no longer needed, see below. On a board where it was turned on, a USB controller on the built-in USB port works again.
+- Boards with HSTX video now run at 384 MHz instead of 378 MHz. See [Overclocking](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#overclocking).
 
 ## Fixes
 
+- **No more dots or lines in the picture.** On boards with HSTX video, some TVs and monitors showed small dots or short dotted lines, for example on dark screens. The picture is now clean on every HSTX board, also with the 504 MHz overclock, and the built-in USB port can still be used for controllers and USB drive mode. Thanks to @szuping for the hint that led to this fix.
 - **USB controllers on the Adafruit Fruit Jam and other boards with PIO-USB are now found at every start.** On boards with an older RP2350 chip they were often not detected.
 
 # v0.19.1 Release notes
@@ -75,7 +81,7 @@ The binaries are the same as in v0.19.
 - **Games larger than 4 MB.** *Super Street Fighter II* now plays. It needs a board with PSRAM, or one whose flash has room for it. ([#21](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/21))
 - **Games too large for PSRAM.** On a board with HSTX video, PSRAM and 16 MB of flash, such as the Adafruit Fruit Jam or a Pimoroni Pico Plus 2, games of up to about 15 MB now run, for example *Demons of Asteborg*. The first time such a game is started, the console asks before it writes the game to flash, which takes about a minute, and then restarts into the game. After that it starts in a few seconds. See [Large games](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#large-games).
 - **Optional 504 MHz overclock** on the Adafruit Fruit Jam, and on a Pico 2 or Pimoroni Pico Plus 2 on a breadboard or the PicoNES PCB, in the settings menu. It is off by default and not advised; see [Overclocking](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#overclocking).
-- **New setting: Video Clock Fix** (Pico 2, Pimoroni Pico Plus 2, PicoNES PCB, Adafruit Metro RP2350 and Murmulator M2). Turn it on if your TV or monitor shows small dots or lines in the picture. A USB controller can then no longer be used; use a NES, SNES or Wii controller instead. On the Adafruit Fruit Jam this is always on. See [Video Clock Fix](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#video-clock-fix).
+- ~~**New setting: Video Clock Fix** (Pico 2, Pimoroni Pico Plus 2, PicoNES PCB, Adafruit Metro RP2350 and Murmulator M2). Turn it on if your TV or monitor shows small dots or lines in the picture. A USB controller can then no longer be used; use a NES, SNES or Wii controller instead. On the Adafruit Fruit Jam this is always on. See [Video Clock Fix](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#video-clock-fix).~~ Removed in v0.20.
 - **6 button controllers.** Games such as *Super Street Fighter II* can now use the X, Y and Z buttons. The new **Genesis pad** setting chooses between a 3 and a 6 button controller; on **Auto**, the default, the game's cartridge decides. Some older games do not work with a 6 button controller, which is why they still get a 3 button one. ([#30](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/30))
 - **New button layout in games.** Controllers other than Genesis ones are now mapped by the position of their buttons. On a SNES controller Y, B and A are Genesis A, B and C, and L, X and R are X, Y and Z. On a NES controller SELECT, B and A are Genesis A, B and C. The menus are unchanged. See [Buttons in a game](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#buttons-in-a-game) for all controllers. ([#32](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/32), [#35](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/35))
 - **Sega CD / Mega-CD games.** On boards with HSTX video and PSRAM, such as the Adafruit Fruit Jam, some Sega CD games now run, others still have bugs and graphical artifacts. Most are too slow to be playable. Pick the game's `.cue` file in the menu; a Sega CD BIOS is needed. Games on more than one disc change discs from the settings menu, and saved games are kept on the SD card. See [Sega CD and MD+](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#sega-cd-and-md).

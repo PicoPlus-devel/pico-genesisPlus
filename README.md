@@ -31,7 +31,6 @@ Based on [Gwenesis](https://github.com/bzhxx/gwenesis) by bzhxx, with the Sega C
 - PSRAM is detected at boot. With PSRAM a game starts as soon as it is picked; without it the rom is first written to flash. See [PSRAM](#psram).
 - Runs standalone, or with [pico-bootLoader](#several-emulators-on-one-board) next to other emulators on the same board.
 - An optional 504 MHz overclock on the Fruit Jam and on a Pico 2 or Pico Plus 2 in the `-c2` build, off by default and not advised. See [Overclocking](#overclocking).
-- A [Video Clock Fix](#video-clock-fix) for TVs and monitors that show small dots or lines in the picture.
 - A [PC test harness](#pc-test-harness) that runs the emulator core on Linux, for developers.
 
 See [Known limitations](#known-limitations) for what is not supported.
@@ -147,7 +146,6 @@ The [Olimex RP2040-PICO-PC](https://www.olimex.com/Products/MicroPython/PICO/RP2
 - **Sound:** through HDMI and the audio jack at the same time.
 - **Controllers:** USB controllers and a USB keyboard on the USB-A port. A NES or SNES controller can be connected to the UEXT connector: clock on GPIO 5, latch on GPIO 9 and data on GPIO 20. There is no second controller port and no Wii Classic controller support.
 - **PSRAM:** a Pico 2 has none, so a game is written to flash before it starts, see [PSRAM](#psram). The last 260 KB of flash are reserved on this board and never used for games, so the largest game that fits is 260 KB smaller than with a Pico 2 on other boards.
-- **Video Clock Fix:** available in the settings menu, see [Video Clock Fix](#video-clock-fix). With it enabled the USB-A port no longer works for controllers, so a NES or SNES controller on the UEXT connector is needed.
 - **Pico 2 W:** there is no Pico 2 W binary. On a Pico 2 W, GPIO 23, which this build uses to reduce noise on the audio jack, is connected to the wireless chip.
 
 Support for this board was contributed by [DnCraptor](https://github.com/DnCraptor).
@@ -341,7 +339,7 @@ sound to keep up with, there is room to draw every frame.
 
 ## Overclocking
 
-By default the RP2350 is overclocked to 378 MHz on boards with HSTX video and to 324 MHz on
+By default the RP2350 is overclocked to 384 MHz on boards with HSTX video and to 324 MHz on
 the others. These are the clocks the emulator is developed and tested with.
 
 On HW_CONFIG 2 (Pimoroni Pico Plus 2 or a Pico 2 with Adafruit DVI breakout, also on the
@@ -353,24 +351,11 @@ the board restarts to apply it. It is not offered on the other boards.
 > [!WARNING]
 > **The 504 MHz option is not advised. Leave it off.**
 >
-> - **It has not been tested with this emulator.** Cartridge games already run at full speed at 378 MHz. Whether it makes Sega CD games run faster has not been measured.
+> - **It has not been tested with this emulator.** Cartridge games already run at full speed at 384 MHz. Whether it makes Sega CD games run faster has not been measured.
 > - **It raises the core voltage and makes the chip run considerably hotter.** Sustained operation at that clock and voltage can overheat, destabilise or permanently damage the RP2350 and the board it is on, and shorten its lifetime.
 > - **It can cause instability and crashes**, which is why it is off by default.
 >
 > The option exists for experimenting only. If you enable it, you do so entirely at your own risk.
-
-### Video Clock Fix
-
-At 378 MHz and higher the HDMI output clock is derived from the CPU clock, and some TVs and monitors then show small dots or short dotted lines in the picture. Taking the HDMI clock from the clock source of the built-in USB port avoids this, but leaves that port without a usable clock.
-
-- On HW_CONFIG 8 (Adafruit Fruit Jam) this is always done. USB controllers are connected to the second USB port on this board, so nothing is lost.
-- On the other boards with HSTX video, HW_CONFIG 2 (Pico 2 or Pimoroni Pico Plus 2 with Adafruit DVI breakout, also on the PicoNES PCB), HW_CONFIG 5 (Adafruit Metro RP2350), HW_CONFIG 13 (Murmulator M2) and HW_CONFIG 15 (Olimex RP2040-PICO-PC, where it is the USB-A port), the built-in USB port is the only USB port, so this is a setting: **Video Clock Fix**, in the settings menu of the rom browser, below the overclock. It is off by default.
-- Boards with PicoDVI video are not affected and do not offer the setting.
-
-> [!IMPORTANT]
-> With Video Clock Fix enabled, the built-in USB port can no longer be used for a gamepad, keyboard or mouse. Use a NES, SNES or Wii Classic controller on the GPIO controller ports instead. The port still powers the board, and USB drive mode remains available.
-
-The setting can only be enabled while a NES, SNES or Wii Classic controller is detected; otherwise an error message is shown. A SNES controller cannot be detected until a button on it has been pressed. Enabling the setting shows a warning first; confirming it restarts the board. To disable it, set it to OFF in the settings menu. If no working controller is available, delete `settings_MD.dat` from the root of the SD card on a computer: on the next start the board disables the fix and restarts once.
 
 ## Recently played games
 
@@ -614,6 +599,10 @@ Gwenesis is itself built out of other people's work:
 - The **PicoNES Mini** and **PicoNES Micro** PCBs, and the 3D-printed cases for all of them, were designed by **Gavin Knight** ([DynaMight1124](https://github.com/DynaMight1124)).
 - Support for the **Olimex RP2040-PICO-PC**, including sound through its audio jack, was contributed by [DnCraptor](https://github.com/DnCraptor) ([pico_shared #100](https://github.com/PicoPlus-devel/pico_shared/pull/100)).
 
+### Suggestions
+
+- [szuping](https://github.com/szuping) suggested looking at the PLL configuration of the system clock, which led to the 384 MHz clock setup that keeps the HDMI picture free of dots while the built-in USB port remains available.
+
 ### AI assistance
 
 [Anthropic Claude Opus 4.7, Opus 5 and Opus 5.5](https://www.anthropic.com/claude/opus) assisted with:
@@ -630,6 +619,6 @@ Gwenesis is itself built out of other people's work:
 - cartridge bank switching for games larger than 4 MB, and running games too large for PSRAM from flash
 - 6 button controller support and the position-based button layout
 - porting the Sega CD, MD+ and *Pier Solar* support from PicoDrive, with the multi-disc handling and the BIOS selection
-- the Video Clock Fix setting
+- the Video Clock Fix setting, and the HDMI clock setup at 384 MHz that replaced it
 - interlace mode, for the two-player mode of *Sonic the Hedgehog 2*
 - general bug fixes, and rewrites of this readme and the changelog
