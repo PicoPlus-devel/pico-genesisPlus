@@ -34,6 +34,7 @@ Only RP2350 (pico 2 based boards) supported. Works best with [Adafruit Fruit Jam
 
 - **The Video Clock Fix setting has been removed.** It is no longer needed, see below. On a board where it was turned on, a USB controller on the built-in USB port works again.
 - Boards with HSTX video now run at 384 MHz instead of 378 MHz. See [Overclocking](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#overclocking).
+- **USB keyboard in the menus.** Enter selects and Esc goes back.
 
 ## Fixes
 
