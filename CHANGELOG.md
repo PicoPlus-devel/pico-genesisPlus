@@ -1,6 +1,6 @@
 # CHANGELOG
 
-**v0.20** removes the small dots or lines some TVs and monitors showed in the picture, while the built-in USB port keeps working, and finds USB controllers at every start on the Adafruit Fruit Jam and other boards with PIO-USB.
+**v0.20.1** fixes picture drop-outs and flickering lines in DVI mode on boards with HSTX video.
 
 
 # General Info
@@ -27,6 +27,18 @@ Only RP2350 (pico 2 based boards) supported. Works best with [Adafruit Fruit Jam
 > **Note:** This limitation does **not** apply to **HSTX-based boards** (e.g., *Adafruit Fruit Jam*), where the monitor refresh rate can be set to **60 Hz**.
 >
 > Games also **run slower** on PicoDVI boards. See [Speed on PicoDVI boards](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#speed-on-picodvi-boards).
+
+# v0.20.1 Release notes
+
+## Changes
+
+- **NES and SNES controllers on the controller ports are now read with the same timing as a real console**, on all boards. Thanks to @javavi.
+- Under pico-bootLoader, the settings menu entry that goes back to the bootloader is now called **Return to boot loader**.
+
+## Fixes
+
+- **The picture no longer drops out in DVI mode.** On boards with HSTX video, with *Display Mode* set to DVI, the picture could randomly drop out.
+- **No more flickering lines in DVI mode.** On boards with HSTX video, with *Display Mode* set to DVI, now and then a single line was shown shifted to the right for one frame.
 
 # v0.20 Release notes
 
