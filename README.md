@@ -194,6 +194,10 @@ The RP2350-PiZero is supported on this PCB. The flickering picture of [#7](https
 
 See also [PCB with Waveshare RP2350-PiZero](https://github.com/PicoPlus-devel/pico-infonesPlus#pcb-with-waveshare-rp2350-pizero) in the pico-infonesPlus readme.
 
+| <img src="assets/WaveShareRP2350PiZeroLiuPCB_top.jpg" width="380" alt="The PCB seen from above, with the RP2350-PiZero, the ESP32 module, two NES and two SNES controller ports"> | <img src="assets/WaveShareRP2350PiZeroLiuPCB_inuse.jpg" width="380" alt="The PCB in use, with a DualShock 4 controller"> |
+|:--:|:--:|
+| <img src="assets/WaveShareRP2350PiZeroLiuPCB_side.jpg" width="380" alt="The PCB seen from the side"> | <img src="assets/WaveShareRP2350PiZeroLiuPCB_front.jpg" width="380" alt="The front of the PCB, with its HDMI port below the RP2350-PiZero"> |
+
 ### Other build configurations
 
 `bld.sh` has a few more configurations that belong to related projects but are not supported here: `-c3` and `-c4` are RP2040 boards, `-c7` (the Waveshare RP2350-PiZero on its own, with video on its mini HDMI port) is disabled because the picture flickers on it, see [#7](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/7), `-c11` is deprecated, and `-c14` (Adafruit Feather RP2350 with TLV320DAC3100) builds but has no release binary. The RP2350-PiZero itself does work on the [PCB for the Waveshare RP2350-PiZero](#pcb-with-waveshare-rp2350-pizero) (`-c18`), which puts the picture on the HDMI port of the PCB. Run `./bld.sh -h` for the full list of options.
