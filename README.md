@@ -16,10 +16,10 @@ Based on [Gwenesis](https://github.com/bzhxx/gwenesis) by bzhxx, with the Sega C
 **Picture and sound**
 - 60 Hz HDMI output with sound on boards with HSTX video. Other boards use the PicoDVI driver at 77.1 Hz, and games run slower there. See [Supported boards](#supported-boards).
 - Screen modes with and without scanlines, [frame skip](#frame-skip) and a framerate display.
-- On the Fruit Jam, sound also through the built-in speaker and the headphone jack, with volume control and a VU meter on the board's LEDs. On the Pimoroni Pico DV Demo Base and the Murmulator M1, sound through the line-out jack. On the Olimex RP2040-PICO-PC, sound also through the audio jack.
+- On the Fruit Jam, sound also through the built-in speaker and the headphone jack, with volume control and a VU meter on the board's LEDs. On the Pimoroni Pico DV Demo Base and the Murmulator M1, sound through the line-out jack. On the Olimex RP2040-PICO-PC, sound also through the audio jack. On the Pico Computer 3 and the PCB for the Waveshare RP2350-PiZero, sound through HDMI or the audio jack.
 
 **Controllers**
-- USB controllers (Dual Shock/Dual Sense, PSClassic, XInput, Genesis Mini 1 and 2, Retro-Bit Arcade Pad, NES and SNES style pads), NES and SNES controllers on the GPIO port, SNES Classic and Wii Classic Pro controllers on the Fruit Jam, and a USB keyboard. See [Controllers and buttons](#controllers-and-buttons).
+- USB controllers (Dual Shock/Dual Sense, PSClassic, XInput, Genesis Mini 1 and 2, Retro-Bit Arcade Pad, NES and SNES style pads), NES and SNES controllers on the GPIO port, SNES Classic and Wii Classic Pro controllers on the Fruit Jam and the Pico Computer 3, Bluetooth controllers through BlueRetro on the PCB for the Waveshare RP2350-PiZero, and a USB keyboard. See [Controllers and buttons](#controllers-and-buttons).
 - 3 and 6 button controllers, chosen per game from the cartridge header or set in the settings menu. Non-Genesis controllers are mapped by the position of their buttons. See [3 and 6 button games](#3-and-6-button-games).
 
 **Menu**
@@ -53,6 +53,8 @@ Wiring depends on the board. The hardware is the same as for the NES emulator, s
 | Pimoroni Pico Plus 2, wired the same as the Pico 2 above | [Adafruit hardware and breadboard](https://github.com/PicoPlus-devel/pico-infonesPlus/blob/main/README.md#raspberry-pi-pico-or-pico-2-setup-with-adafruit-hardware-and-breadboard), [PicoNES PCB](#picones-pcb) (needs v2.6 or v2.8 with male headers) |
 | PicoNES, PicoNES Mini or PicoNES Micro PCB | [Custom PCBs](#custom-pcbs) |
 | Olimex RP2040-PICO-PC with a Pico 2 | [Olimex RP2040-PICO-PC](#olimex-rp2040-pico-pc) |
+| Pico Computer 3 | [Pico Computer 3](#pico-computer-3) |
+| PCB for the Waveshare RP2350-PiZero | [PCB with Waveshare RP2350-PiZero](#pcb-with-waveshare-rp2350-pizero) |
 
 
 
@@ -70,6 +72,8 @@ Ready-made `.uf2` files for all of these are on the [releases page](https://gith
 | Adafruit Metro RP2350 | HSTX, 60 Hz | `./bld.sh -c5` | `picogenesisPlus_AdafruitMetroRP2350_arm.uf2` |
 | Murmulator M2 — *untested* | HSTX, 60 Hz | `./bld.sh -c13` | `picogenesisPlus_MurmulatorM2_arm.uf2` |
 | [Olimex RP2040-PICO-PC](#olimex-rp2040-pico-pc) with a Pico 2 | HSTX, 60 Hz | `./bld.sh -c15` | `picogenesisPlus_OlimexPicoPC_arm.uf2` |
+| [Pico Computer 3](#pico-computer-3) — *untested* | HSTX, 60 Hz | `./bld.sh -c17` | `picogenesisPlus_PicoComputer3_arm.uf2` |
+| [PCB for the Waveshare RP2350-PiZero](#pcb-with-waveshare-rp2350-pizero) | HSTX, 60 Hz | `./bld.sh -c18` | `picogenesisPlus_WaveShareRP2350PiZeroLiuPCB_arm_piousb.uf2` |
 | Pimoroni [Pico DV Demo Base](https://shop.pimoroni.com/products/pimoroni-pico-dv-demo-base?variant=39494203998291) | PicoDVI, 77.1 Hz, runs slower | `./bld.sh -c1 -2` | `picogenesisPlus_PimoroniDVI_pico2_arm.uf2` |
 | Waveshare RP2350-Zero on the [PicoNES Mini PCB](#picones-mini-pcb) | PicoDVI, 77.1 Hz, runs slower | `./bld.sh -c6 -2` | `picogenesisPlus_WaveShareRP2350ZeroWithPCB_arm.uf2` |
 | Waveshare RP2350-USB-A, on its own or on the [PicoNES Micro PCB](#picones-micro-pcb) | PicoDVI, 77.1 Hz, runs slower | `./bld.sh -c9` | `picogenesisPlus_WaveShare2350USBA_arm_piousb.uf2` |
@@ -105,8 +109,9 @@ These are the boards it applies to:
 
 For games at full speed you want one of the HSTX boards from the table above: the
 Adafruit Fruit Jam, a Pico 2 or Pimoroni Pico Plus 2 with an Adafruit DVI breakout
-(also on the PicoNES PCB), the Adafruit Metro RP2350, the Murmulator M2 or the Olimex
-RP2040-PICO-PC with a Pico 2.
+(also on the PicoNES PCB), the Adafruit Metro RP2350, the Murmulator M2, the Olimex
+RP2040-PICO-PC with a Pico 2, the Pico Computer 3 or the PCB for the Waveshare
+RP2350-PiZero.
 
 This is not something that can be tuned away. The board is already clocked as high
 as it will go, so there is nothing left to hand to the emulator.
@@ -125,7 +130,7 @@ cannot show this, so there the blank screen is all you get. Games in the
 [recently played](#recently-played-games) list marked `[READY]` skip the wait
 altogether.
 
-It is detected at boot, so no separate binary is needed. You have it on the Fruit Jam and the Metro RP2350, on a Murmulator with a PSRAM chip fitted, and on a [Pimoroni Pico Plus 2](https://shop.pimoroni.com/products/pimoroni-pico-plus-2?variant=42092668289107) in any build that takes a Pico-shaped board — the breadboard/[PicoNES PCB](#picones-pcb) build (`-c2`), the Pimoroni Pico DV Demo Base (`-c1`) and the Spotpear board (`-c10`).
+It is detected at boot, so no separate binary is needed. You have it on the Fruit Jam, the Metro RP2350 and the Pico Computer 3, on a Murmulator or an RP2350-PiZero with a PSRAM chip fitted, and on a [Pimoroni Pico Plus 2](https://shop.pimoroni.com/products/pimoroni-pico-plus-2?variant=42092668289107) in any build that takes a Pico-shaped board — the breadboard/[PicoNES PCB](#picones-pcb) build (`-c2`), the Pimoroni Pico DV Demo Base (`-c1`) and the Spotpear board (`-c10`).
 
 Roms that are too large for the memory the board has are left out of the list in the menu. Games larger than 8 MB are covered under [Large games](#large-games).
 
@@ -150,15 +155,54 @@ The [Olimex RP2040-PICO-PC](https://www.olimex.com/Products/MicroPython/PICO/RP2
 
 Support for this board was contributed by [DnCraptor](https://github.com/DnCraptor).
 
+### Pico Computer 3
+
+The [Pico Computer 3](https://github.com/UKTailwind/Pico-Computer-3) (PC3) is an RP2350B computer board with an HDMI connector, a microSD card slot, 8 MB PSRAM, a USB hub and an audio jack. It runs the `-c17` build.
+
+> [!NOTE]
+> Support for this board is new and has not been tested with this emulator yet. The pin assignment and other details below may change in a future release.
+
+- **Video:** HSTX, 60 Hz, on the HDMI connector.
+- **Sound:** through HDMI, or through the audio jack with *External Audio* in the settings menu.
+- **Controllers:** USB controllers and a USB keyboard on the USB-A ports. Up to two NES or SNES controllers on the external I/O header H4:
+
+  | | Clock | Latch | Data |
+  |:--|:--|:--|:--|
+  | Port 1 | GPIO 0 | GPIO 1 | GPIO 2 |
+  | Port 2 | GPIO 3 | GPIO 4 | GPIO 5 |
+
+  A SNES Classic or Wii Classic Pro controller connects to I2C0: SDA on GPIO 20 and SCL on GPIO 21.
+- **PSRAM:** fitted on the board. Games are loaded from the SD card into PSRAM.
+- **LED:** the heartbeat LED on GPIO 25 is used when jumper H5 is set to 1-2.
+
+Support for this board was contributed by [javavi](https://github.com/javavi).
+
+### PCB with Waveshare RP2350-PiZero
+
+This PCB, designed by Liu Szuping ([szuping](https://github.com/szuping)), carries a [Waveshare RP2350-PiZero](https://www.waveshare.com/rp2350-pizero.htm) and adds an HDMI port, an audio jack, NES and SNES controller ports and a socket for an ESP32 module. It runs the `-c18` build.
+
+> [!NOTE]
+> The PCB design is not yet available.
+
+The RP2350-PiZero is supported on this PCB. The flickering picture of [#7](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/7), the reason there is no build for the RP2350-PiZero on its own, does not apply here: on this PCB the picture comes from the HDMI port of the PCB, not from the mini HDMI port of the RP2350-PiZero.
+
+- **Video:** HSTX, 60 Hz, on the HDMI port of the PCB. The mini HDMI port of the RP2350-PiZero is not used.
+- **Sound:** through HDMI, or through the audio jack with *External Audio* in the settings menu.
+- **Controllers:** a USB controller or a USB keyboard on the PIO-USB port of the RP2350-PiZero, and up to two NES or SNES controllers in the controller ports of the PCB.
+- **Bluetooth controllers:** with an ESP32 module running [BlueRetro](https://github.com/darthcloud/blueretro) in the socket, Bluetooth controllers are used instead of the controller ports. BlueRetro is set up with its [configuration tool](https://darthcloud.github.io/BlueRetroWebCfg_Beta/). Remove the ESP32 module to use the controller ports.
+- **PSRAM:** optional, it has to be soldered onto the RP2350-PiZero. Without it a game is written to flash before it starts, see [PSRAM](#psram). Boards that combine PSRAM with a non-Winbond flash chip need a one-time fix first, see [PSRAM with a non-Winbond flash chip](https://github.com/PicoPlus-devel/pico-infonesPlus#psram-with-a-non-winbond-flash-chip).
+
+See also [PCB with Waveshare RP2350-PiZero](https://github.com/PicoPlus-devel/pico-infonesPlus#pcb-with-waveshare-rp2350-pizero) in the pico-infonesPlus readme.
+
 ### Other build configurations
 
-`bld.sh` has a few more configurations that belong to related projects but are not supported here: `-c3` and `-c4` are RP2040 boards, `-c7` (Waveshare RP2350-PiZero) is disabled because of [#7](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/7), `-c11` is deprecated, and `-c14` (Adafruit Feather RP2350 with TLV320DAC3100) builds but has no release binary. Run `./bld.sh -h` for the full list of options.
+`bld.sh` has a few more configurations that belong to related projects but are not supported here: `-c3` and `-c4` are RP2040 boards, `-c7` (the Waveshare RP2350-PiZero on its own, with video on its mini HDMI port) is disabled because the picture flickers on it, see [#7](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/7), `-c11` is deprecated, and `-c14` (Adafruit Feather RP2350 with TLV320DAC3100) builds but has no release binary. The RP2350-PiZero itself does work on the [PCB for the Waveshare RP2350-PiZero](#pcb-with-waveshare-rp2350-pizero) (`-c18`), which puts the picture on the HDMI port of the PCB. Run `./bld.sh -h` for the full list of options.
 
 ### Several emulators on one board
 
 The binaries above are standalone: one board, one emulator. With [pico-bootLoader](https://github.com/PicoPlus-devel/pico-bootLoader) you can instead keep several emulators, and a *Doom* port, on the same board and pick one from an on-screen menu at power-on, without a computer. The bootloader and an SD card archive containing this emulator are on the [pico-bootLoader releases page](https://github.com/PicoPlus-devel/pico-bootLoader/releases).
 
-Started that way, the settings menu gains an extra item, **Return to emulator selection menu**, which takes you back to that boot menu. To build a bootloader version yourself, add `-b` to the build command, for example `./bld.sh -c8 -b`; the `.uf2` ends up in `releases_bl`.
+Started that way, the settings menu gains an extra item, **Return to boot loader**, which takes you back to that boot menu. To build a bootloader version yourself, add `-b` to the build command, for example `./bld.sh -c8 -b`; the `.uf2` ends up in `releases_bl`.
 
 ## Custom PCBs
 
@@ -173,6 +217,8 @@ Four community PCB designs turn a supported board and its breakouts into a small
 
 > [!NOTE]
 > The PicoNES v2.6 and v2.8 are shown with a Pimoroni Pico Plus 2. A Raspberry Pi Pico 2 or Pico 2 W can also be fitted.
+
+A fifth design, the [PCB for the Waveshare RP2350-PiZero](#pcb-with-waveshare-rp2350-pizero) by Liu Szuping, is supported by the emulator, but the design is not yet available.
 
 > [!NOTE]
 > Sellers on AliExpress have copied the PicoNES design and sell ready-made boards. For questions about those, contact the seller.
@@ -245,9 +291,10 @@ Supported controllers:
 - Dual Shock/Dual Sense and PSClassic
 - Xbox style controllers (XInput)
 - Genesis Mini 1 and 2, and the [Retro-Bit 8 button Arcade Pad with USB](https://www.retro-bit.com/controllers/genesis/#usb)
-- NES and SNES controllers on the GPIO port of a PCB or breadboard setup, or on the UEXT connector of the [Olimex RP2040-PICO-PC](#olimex-rp2040-pico-pc)
+- NES and SNES controllers on the GPIO port of a PCB or breadboard setup, on the UEXT connector of the [Olimex RP2040-PICO-PC](#olimex-rp2040-pico-pc), on the I/O header of the [Pico Computer 3](#pico-computer-3), or in the controller ports of the [PCB for the Waveshare RP2350-PiZero](#pcb-with-waveshare-rp2350-pizero)
 - AliExpress NES and SNES USB controllers
-- Fruit Jam: SNES Classic and Wii Classic Pro controllers over I2C. Connect the controller to an [Adafruit Wii Nunchuck Breakout Adapter](https://www.adafruit.com/product/4836).
+- Fruit Jam and Pico Computer 3: SNES Classic and Wii Classic Pro controllers over I2C. Connect the controller to an [Adafruit Wii Nunchuck Breakout Adapter](https://www.adafruit.com/product/4836).
+- PCB for the Waveshare RP2350-PiZero: Bluetooth controllers through an ESP32 module running [BlueRetro](https://github.com/darthcloud/blueretro), see [PCB with Waveshare RP2350-PiZero](#pcb-with-waveshare-rp2350-pizero).
 - USB keyboard
 
 ### Buttons in the menu
@@ -417,7 +464,7 @@ When using a USB keyboard:
 
 Cartridges that carried a battery-backed memory chip — *Sonic the Hedgehog 3*, *Sonic & Knuckles*, the *Phantasy Star* and *Shining Force* games, *Story of Thor*, the NHL series and many more — can save, and the save is kept on the SD card. Nothing to switch on: a game that has save memory picks it up when it starts.
 
-The save is written back when you quit the game, when you reset it, and when you open the settings menu with SELECT + START. That last one is what makes it safe to leave through **Enter bootsel mode** or **Return to emulator selection menu** ([bootloader builds only](#several-emulators-on-one-board)), which restart the board there and then. Nothing is written while you are playing, so switching the board off in the middle of a game loses whatever the game has saved since you last opened the menu — open the menu first if you have just saved and want to be sure.
+The save is written back when you quit the game, when you reset it, and when you open the settings menu with SELECT + START. That last one is what makes it safe to leave through **Enter bootsel mode** or **Return to boot loader** ([bootloader builds only](#several-emulators-on-one-board)), which restart the board there and then. Nothing is written while you are playing, so switching the board off in the middle of a game loses whatever the game has saved since you last opened the menu — open the menu first if you have just saved and want to be sure.
 
 The files live in the `/SAVES` folder on the card, one per game, named after the rom with a `.srm` extension. They are 64 KB and use the same layout as Genesis Plus GX and Kega, so a save can be copied to a PC emulator and back.
 
@@ -598,6 +645,8 @@ Gwenesis is itself built out of other people's work:
 - The **PicoNES PCB** was designed by **John Edgar Park** ([@johnedgarpark](https://twitter.com/johnedgarpark)).
 - The **PicoNES Mini** and **PicoNES Micro** PCBs, and the 3D-printed cases for all of them, were designed by **Gavin Knight** ([DynaMight1124](https://github.com/DynaMight1124)).
 - Support for the **Olimex RP2040-PICO-PC**, including sound through its audio jack, was contributed by [DnCraptor](https://github.com/DnCraptor) ([pico_shared #100](https://github.com/PicoPlus-devel/pico_shared/pull/100)).
+- Support for the **Pico Computer 3** was contributed by [javavi](https://github.com/javavi).
+- The **PCB for the Waveshare RP2350-PiZero** was designed by Liu Szuping ([szuping](https://github.com/szuping)).
 
 ### Suggestions
 

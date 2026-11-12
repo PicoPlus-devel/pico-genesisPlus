@@ -1,6 +1,6 @@
 # CHANGELOG
 
-**v0.20.1** fixes picture drop-outs and flickering lines in DVI mode on boards with HSTX video.
+**v0.21** adds support for the Pico Computer 3 and a PCB for the Waveshare RP2350-PiZero, and fixes picture drop-outs and flickering lines in DVI mode on boards with HSTX video.
 
 
 # General Info
@@ -28,7 +28,12 @@ Only RP2350 (pico 2 based boards) supported. Works best with [Adafruit Fruit Jam
 >
 > Games also **run slower** on PicoDVI boards. See [Speed on PicoDVI boards](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#speed-on-picodvi-boards).
 
-# v0.20.1 Release notes
+# v0.21 Release notes
+
+## What's new
+
+- **Pico Computer 3.** The emulator now runs on the [Pico Computer 3](https://github.com/UKTailwind/Pico-Computer-3): a 60 Hz HDMI picture, sound through HDMI or the audio jack, USB controllers on the USB-A ports, PSRAM, and NES or SNES controllers and a Wii Classic controller on the I/O header. The pin assignment may still change. See [Pico Computer 3](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#pico-computer-3). Thanks to @javavi.
+- **PCB for the Waveshare RP2350-PiZero.** The emulator now runs on a PCB for the Waveshare RP2350-PiZero, designed by @szuping: a 60 Hz HDMI picture, sound through HDMI or the audio jack, a USB controller on the PIO-USB port, NES and SNES controller ports, and a socket for an ESP32 module that connects Bluetooth controllers through [BlueRetro](https://github.com/darthcloud/blueretro). The PCB design is not yet available. See [PCB with Waveshare RP2350-PiZero](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#pcb-with-waveshare-rp2350-pizero).
 
 ## Changes
 
@@ -94,7 +99,7 @@ The binaries are the same as in v0.19.
 - **Games larger than 4 MB.** *Super Street Fighter II* now plays. It needs a board with PSRAM, or one whose flash has room for it. ([#21](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/21))
 - **Games too large for PSRAM.** On a board with HSTX video, PSRAM and 16 MB of flash, such as the Adafruit Fruit Jam or a Pimoroni Pico Plus 2, games of up to about 15 MB now run, for example *Demons of Asteborg*. The first time such a game is started, the console asks before it writes the game to flash, which takes about a minute, and then restarts into the game. After that it starts in a few seconds. See [Large games](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#large-games).
 - **Optional 504 MHz overclock** on the Adafruit Fruit Jam, and on a Pico 2 or Pimoroni Pico Plus 2 on a breadboard or the PicoNES PCB, in the settings menu. It is off by default and not advised; see [Overclocking](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#overclocking).
-- ~~**New setting: Video Clock Fix** (Pico 2, Pimoroni Pico Plus 2, PicoNES PCB, Adafruit Metro RP2350 and Murmulator M2). Turn it on if your TV or monitor shows small dots or lines in the picture. A USB controller can then no longer be used; use a NES, SNES or Wii controller instead. On the Adafruit Fruit Jam this is always on. See [Video Clock Fix](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#video-clock-fix).~~ Removed in v0.20.
+- ~~**New setting: Video Clock Fix** (Pico 2, Pimoroni Pico Plus 2, PicoNES PCB, Adafruit Metro RP2350 and Murmulator M2). Turn it on if your TV or monitor shows small dots or lines in the picture. A USB controller can then no longer be used; use a NES, SNES or Wii controller instead. On the Adafruit Fruit Jam this is always on.~~ Removed in v0.20.
 - **6 button controllers.** Games such as *Super Street Fighter II* can now use the X, Y and Z buttons. The new **Genesis pad** setting chooses between a 3 and a 6 button controller; on **Auto**, the default, the game's cartridge decides. Some older games do not work with a 6 button controller, which is why they still get a 3 button one. ([#30](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/30))
 - **New button layout in games.** Controllers other than Genesis ones are now mapped by the position of their buttons. On a SNES controller Y, B and A are Genesis A, B and C, and L, X and R are X, Y and Z. On a NES controller SELECT, B and A are Genesis A, B and C. The menus are unchanged. See [Buttons in a game](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#buttons-in-a-game) for all controllers. ([#32](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/32), [#35](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/35))
 - **Sega CD / Mega-CD games.** On boards with HSTX video and PSRAM, such as the Adafruit Fruit Jam, some Sega CD games now run, others still have bugs and graphical artifacts. Most are too slow to be playable. Pick the game's `.cue` file in the menu; a Sega CD BIOS is needed. Games on more than one disc change discs from the settings menu, and saved games are kept on the SD card. See [Sega CD and MD+](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#sega-cd-and-md).
@@ -273,6 +278,26 @@ Contributed by [DnCraptor](https://github.com/DnCraptor). See the [Olimex RP2040
 | Olimex RP2040-PICO-PC with a Pico 2 | [picogenesisPlus_OlimexPicoPC_arm.uf2](https://github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_OlimexPicoPC_arm.uf2) |
 
 There is no Pico 2 W binary for this board.
+
+### Pico Computer 3 (untested)
+
+Contributed by [javavi](https://github.com/javavi). See the [Pico Computer 3 section of the readme](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#pico-computer-3).
+
+| Board | Binary |
+|:--|:--|
+| Pico Computer 3 (PC3) | [picogenesisPlus_PicoComputer3_arm.uf2](https://github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_PicoComputer3_arm.uf2) |
+
+### PCB Waveshare RP2350-PiZero
+
+Designed by Liu Szuping. See the [PCB with Waveshare RP2350-PiZero section of the readme](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#pcb-with-waveshare-rp2350-pizero). The PCB design is not yet available.
+
+| Board | Binary |
+|:--|:--|
+| Waveshare RP2350-PiZero (*) | [picogenesisPlus_WaveShareRP2350PiZeroLiuPCB_arm_piousb.uf2](https://github.com/PicoPlus-devel/pico-genesisPlus/releases/latest/download/picogenesisPlus_WaveShareRP2350PiZeroLiuPCB_arm_piousb.uf2) |
+
+This binary is only for the RP2350-PiZero on this PCB.
+
+(*) If you fitted this board with PSRAM and it has a non-Winbond flash chip, apply the [flash_config fix](https://github.com/PicoPlus-devel/pico-infonesPlus#psram-with-a-non-winbond-flash-chip) before flashing the emulator.
 
 ### Other downloads
 
