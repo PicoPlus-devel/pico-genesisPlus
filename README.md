@@ -184,7 +184,7 @@ This PCB, designed by Liu Szuping ([szuping](https://github.com/szuping)), carri
 > [!NOTE]
 > The PCB design is not yet available.
 
-The RP2350-PiZero is supported on this PCB. The flickering picture of [#7](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/7), the reason there is no build for the RP2350-PiZero on its own, does not apply here: on this PCB the picture comes from the HDMI port of the PCB, not from the mini HDMI port of the RP2350-PiZero.
+The RP2350-PiZero is supported on this PCB, with one known issue: during play, some TVs and monitors lose the picture for a few seconds at a time, while others show it without interruption. This is a limitation of the RP2350-PiZero at 384 MHz, the clock this emulator requires. The HDMI port of the PCB does not avoid it, see also [#7](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/7). Programs that run at 252 MHz are not affected.
 
 - **Video:** HSTX, 60 Hz, on the HDMI port of the PCB. The mini HDMI port of the RP2350-PiZero is not used.
 - **Sound:** through HDMI, or through the audio jack with *External Audio* in the settings menu.
@@ -200,7 +200,7 @@ See also [PCB with Waveshare RP2350-PiZero](https://github.com/PicoPlus-devel/pi
 
 ### Other build configurations
 
-`bld.sh` has a few more configurations that belong to related projects but are not supported here: `-c3` and `-c4` are RP2040 boards, `-c7` (the Waveshare RP2350-PiZero on its own, with video on its mini HDMI port) is disabled because the picture flickers on it, see [#7](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/7), `-c11` is deprecated, and `-c14` (Adafruit Feather RP2350 with TLV320DAC3100) builds but has no release binary. The RP2350-PiZero itself does work on the [PCB for the Waveshare RP2350-PiZero](#pcb-with-waveshare-rp2350-pizero) (`-c18`), which puts the picture on the HDMI port of the PCB. Run `./bld.sh -h` for the full list of options.
+`bld.sh` has a few more configurations that belong to related projects but are not supported here: `-c3` and `-c4` are RP2040 boards, `-c7` (the Waveshare RP2350-PiZero on its own, with video on its mini HDMI port) is disabled because the picture flickers on it, see [#7](https://github.com/PicoPlus-devel/pico-genesisPlus/issues/7), `-c11` is deprecated, and `-c14` (Adafruit Feather RP2350 with TLV320DAC3100) builds but has no release binary. The RP2350-PiZero is supported on the [PCB for the Waveshare RP2350-PiZero](#pcb-with-waveshare-rp2350-pizero) (`-c18`), with the known issue described there. Run `./bld.sh -h` for the full list of options.
 
 ### Several emulators on one board
 
