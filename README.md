@@ -168,8 +168,10 @@ The [Pico Computer 3](https://github.com/UKTailwind/Pico-Computer-3) (PC3) is an
 
   | | Clock | Latch | Data |
   |:--|:--|:--|:--|
-  | Port 1 | GPIO 0 | GPIO 1 | GPIO 2 |
-  | Port 2 | GPIO 3 | GPIO 4 | GPIO 5 |
+  | Port 1 | GPIO 4 | GPIO 5 | GPIO 6 |
+  | Port 2 | GPIO 4 | GPIO 5 | GPIO 7 |
+
+  Both ports share the clock and latch lines.
 
   A SNES Classic or Wii Classic Pro controller connects to I2C0: SDA on GPIO 20 and SCL on GPIO 21.
 - **PSRAM:** fitted on the board. Games are loaded from the SD card into PSRAM.
