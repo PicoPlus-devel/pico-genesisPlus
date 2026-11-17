@@ -28,6 +28,12 @@ Only RP2350 (pico 2 based boards) supported. Works best with [Adafruit Fruit Jam
 >
 > Games also **run slower** on PicoDVI boards. See [Speed on PicoDVI boards](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#speed-on-picodvi-boards).
 
+# Next release
+
+## Changes
+
+- Built with Pico SDK 2.3.1. This leaves a little more memory free, about 0.4 KB.
+
 # v0.21 Release notes
 
 ## What's new
