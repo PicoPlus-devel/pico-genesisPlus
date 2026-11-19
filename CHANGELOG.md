@@ -33,6 +33,7 @@ Only RP2350 (pico 2 based boards) supported. Works best with [Adafruit Fruit Jam
 ## Changes
 
 - Built with Pico SDK 2.3.1. This leaves a little more memory free, about 0.4 KB.
+- On boards with HSTX video and no PSRAM, a progress bar is now shown while a game is written to flash, instead of a blank screen.
 
 # v0.21 Release notes
 
