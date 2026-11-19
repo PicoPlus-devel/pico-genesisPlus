@@ -14,6 +14,9 @@
 #include "nespad.h"
 #include "wiipad.h"
 #include "FrensHelpers.h"
+// pico-bootLoader attract mode may start this application with a random game from here
+// (bootloader builds only, see pico_shared/attract.h).
+FRENS_ATTRACT_DIRS("/roms/MD");
 #include "settings.h"
 #include "FrensFonts.h"
 #include "vumeter.h"
