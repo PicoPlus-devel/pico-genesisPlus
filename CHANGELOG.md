@@ -28,7 +28,9 @@ Only RP2350 (pico 2 based boards) supported. Works best with [Adafruit Fruit Jam
 >
 > Games also **run slower** on PicoDVI boards. See [Speed on PicoDVI boards](https://github.com/PicoPlus-devel/pico-genesisPlus/blob/main/README.md#speed-on-picodvi-boards).
 
-# Next release
+# v0.21_bl
+
+This version is built for [pico-bootLoader](https://github.com/PicoPlus-devel/pico-bootLoader) only, and is included in its SD-card archive. It has no release of its own: without pico-bootLoader, keep using v0.21.
 
 ## What's new
 
